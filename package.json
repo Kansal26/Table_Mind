@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "check:keys": "node scripts/check-supabase-keys.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {
