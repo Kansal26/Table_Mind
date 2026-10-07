@@ -36,6 +36,12 @@ TableMind is built with a modern, scalable web architecture:
 
 ## Getting Started
 
+### Environment setup
+
+Copy `.env.example` to `.env` and fill in the values for the Supabase, Razorpay, Groq/Gemini, Resend, and notification-email groups. Get the Supabase project URL and API keys from **Project Settings > API Keys**. Use the publishable key for `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`; it is public by design. `SUPABASE_SERVICE_ROLE_KEY` takes the Supabase secret key and is server-only. Razorpay's `VITE_RAZORPAY_KEY_ID` is also public by design. Keep all server-only secrets unprefixed with `VITE_`.
+
+After setting up `.env`, run `npm run check:keys` to check configured Supabase keys and connectivity. The command contacts your configured Supabase project; run it locally after entering your own values.
+
 To run the project locally:
 
 ### Prerequisites
@@ -51,8 +57,7 @@ You need Node.js and npm installed. We recommend using [nvm](https://github.com/
    ```sh
    npm install
    ```
-3. Set up your environment variables:
-   * Copy the example environment file and fill in your Supabase and Resend keys.
+3. Set up your environment variables as described above:
    ```sh
    cp .env.example .env
    ```
