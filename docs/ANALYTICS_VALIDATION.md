@@ -48,6 +48,25 @@ Each finding includes:
 - explanation
 - expected and actual values when meaningful
 
+Generate the expanded, reproducible JSON analytics report from the deterministic fixture:
+
+```bash
+npm run analytics:report
+```
+
+This writes `reports/analytics-validation.json`. The report includes:
+
+- row counts by fixture collection and total rows analyzed
+- validation findings, grouped by category and severity, with unique affected-record counts
+- error and warning record counts that avoid counting the same record twice across those severity totals
+- statistical anomalies kept separate from deterministic validation findings
+- per-order formula reconciliation and settled-payment reconciliation
+- daily and restaurant summaries, plus the most important explanations
+- assumptions and limitations alongside the machine-readable results
+- expected-baseline findings are marked in the highlighted findings so known-invalid fixture cases remain visible without being mistaken for unexpected failures
+
+Category counts represent findings and distinct affected records *within that category*. A record can have findings in multiple categories, so category counts are not additive. Known-invalid fixture rows are included and explicitly identified as expected baseline findings.
+
 ## Run commands
 
 ```bash
@@ -63,3 +82,7 @@ npm run lint
 - The fixture is a local test dataset only.
 - Intentionally invalid rows are preserved under `invalidRows` and should be detected as expected baseline problems rather than treated as a broken test suite.
 - The implementation uses deterministic arithmetic and rule-based outlier checks; it does not infer hidden business logic from live production data.
+- Order totals are reconciled as `subtotal - discount_amount + tax` within one cent.
+- Payment reconciliation compares settled payments with the gross total of paid/refunded orders. Cancelled orders are excluded; refunds are reported separately and do not reduce original captured-payment totals.
+- Daily revenue is grouped by order date and excludes cancelled orders; refund amounts use refund date. Sparse synthetic dates are not a meaningful production trend baseline.
+- Statistical anomalies are heuristic observations, not confirmed defects or fraud; the small fixture limits statistical inference.

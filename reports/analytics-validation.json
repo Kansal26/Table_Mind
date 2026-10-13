@@ -1,0 +1,574 @@
+{
+  "reportVersion": 1,
+  "metadata": {
+    "seed": 20250120,
+    "fixtureGeneratedAt": "2025-01-22T00:00:00Z",
+    "localOnly": true
+  },
+  "recordsAnalyzed": {
+    "total": 54,
+    "byType": {
+      "restaurants": 3,
+      "menuItems": 8,
+      "orders": 8,
+      "orderItems": 22,
+      "payments": 7,
+      "refunds": 2,
+      "knownInvalidRows": 4
+    }
+  },
+  "validation": {
+    "findingCount": 12,
+    "errorFindingCount": 2,
+    "warningCount": 10,
+    "recordsWithValidationErrors": 2,
+    "recordsWithWarnings": 10,
+    "expectedBaselineFindingCount": 4,
+    "unexpectedFindingCount": 8,
+    "findingsByCategory": {
+      "invalid_total": {
+        "findingCount": 8,
+        "distinctRecordCount": 8
+      },
+      "known_invalid_fixture": {
+        "findingCount": 4,
+        "distinctRecordCount": 4
+      }
+    },
+    "findingsBySeverity": {
+      "info": 0,
+      "warning": 10,
+      "error": 2,
+      "critical": 0
+    },
+    "findings": [
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1001",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 76,
+        "actual": 84.25,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1001",
+        "expectedCondition": 76,
+        "observedValue": 84.25,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1002",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 84,
+        "actual": 97.8,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1002",
+        "expectedCondition": 84,
+        "observedValue": 97.8,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1003",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 105.5,
+        "actual": 128.2,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1003",
+        "expectedCondition": 105.5,
+        "observedValue": 128.2,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1004",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 60,
+        "actual": 62.4,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1004",
+        "expectedCondition": 60,
+        "observedValue": 62.4,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1005",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 102,
+        "actual": 149.25,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1005",
+        "expectedCondition": 102,
+        "observedValue": 149.25,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1006",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 60,
+        "actual": 73.55,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1006",
+        "expectedCondition": 60,
+        "observedValue": 73.55,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1007",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 96.5,
+        "actual": 110.9,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1007",
+        "expectedCondition": 96.5,
+        "observedValue": 110.9,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "invalid_total",
+        "recordType": "order",
+        "recordId": "ord-1008",
+        "message": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments.",
+        "expected": 72,
+        "actual": 95.75,
+        "ruleId": "invalid_total",
+        "recordIdentifier": "ord-1008",
+        "expectedCondition": 72,
+        "observedValue": 95.75,
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "error",
+        "category": "known_invalid_fixture",
+        "recordType": "order",
+        "recordId": "bad-1",
+        "message": "Known invalid fixture for validation tests: negative subtotal.",
+        "expected": "validator should catch this fixture as invalid",
+        "actual": "negative subtotal",
+        "isExpectedBaseline": true,
+        "ruleId": "known_invalid_fixture",
+        "recordIdentifier": "bad-1",
+        "expectedCondition": "validator should catch this fixture as invalid",
+        "observedValue": "negative subtotal",
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "error",
+        "category": "known_invalid_fixture",
+        "recordType": "order",
+        "recordId": "bad-2",
+        "message": "Known invalid fixture for validation tests: tax exceeds subtotal.",
+        "expected": "validator should catch this fixture as invalid",
+        "actual": "tax exceeds subtotal",
+        "isExpectedBaseline": true,
+        "ruleId": "known_invalid_fixture",
+        "recordIdentifier": "bad-2",
+        "expectedCondition": "validator should catch this fixture as invalid",
+        "observedValue": "tax exceeds subtotal",
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "known_invalid_fixture",
+        "recordType": "refund",
+        "recordId": "bad-3",
+        "message": "Known invalid fixture for validation tests: refund without payment.",
+        "expected": "validator should catch this fixture as invalid",
+        "actual": "refund without payment",
+        "isExpectedBaseline": true,
+        "ruleId": "known_invalid_fixture",
+        "recordIdentifier": "bad-3",
+        "expectedCondition": "validator should catch this fixture as invalid",
+        "observedValue": "refund without payment",
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      },
+      {
+        "severity": "warning",
+        "category": "known_invalid_fixture",
+        "recordType": "order",
+        "recordId": "bad-4",
+        "message": "Known invalid fixture for validation tests: future-dated order.",
+        "expected": "validator should catch this fixture as invalid",
+        "actual": "future-dated order",
+        "isExpectedBaseline": true,
+        "ruleId": "known_invalid_fixture",
+        "recordIdentifier": "bad-4",
+        "expectedCondition": "validator should catch this fixture as invalid",
+        "observedValue": "future-dated order",
+        "recommendation": "Review the source record and compare it against the expected invariant for the relevant business rule.",
+        "evaluationStatus": "evaluated"
+      }
+    ]
+  },
+  "statisticalAnomalies": {
+    "count": 1,
+    "anomalies": [
+      {
+        "metric": "cancellation_flag",
+        "comparisonGroup": "overall",
+        "value": 1,
+        "baselineMedian": 0,
+        "baselineMean": 0.125,
+        "lowerBound": 0,
+        "upperBound": 0,
+        "zScore": 2.6457513110645903,
+        "threshold": 1.5,
+        "method": "IQR",
+        "severity": "warning",
+        "explanation": "Value 1 is outside the baseline range [0.00, 0.00] (IQR multiplier 1.5). This is a statistical flag only, not a confirmed defect; it is 2.65 standard deviations from the mean."
+      }
+    ]
+  },
+  "reconciliations": {
+    "orderTotals": {
+      "evaluated": 8,
+      "matched": 8,
+      "mismatched": 0,
+      "totalExpected": 823.38,
+      "totalActual": 823.38,
+      "records": [
+        {
+          "recordId": "ord-1001",
+          "expected": 80.38,
+          "actual": 80.38,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1002",
+          "expected": 100.76,
+          "actual": 100.76,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1003",
+          "expected": 139.18,
+          "actual": 139.18,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1004",
+          "expected": 62.4,
+          "actual": 62.4,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1005",
+          "expected": 145.58,
+          "actual": 145.58,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1006",
+          "expected": 79.5,
+          "actual": 79.5,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1007",
+          "expected": 111.67,
+          "actual": 111.67,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1008",
+          "expected": 103.91,
+          "actual": 103.91,
+          "difference": 0,
+          "matches": true
+        }
+      ]
+    },
+    "payments": {
+      "evaluated": 7,
+      "matched": 7,
+      "mismatched": 0,
+      "totalExpected": 760.98,
+      "totalActual": 760.98,
+      "records": [
+        {
+          "recordId": "ord-1001",
+          "expected": 80.38,
+          "actual": 80.38,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1002",
+          "expected": 100.76,
+          "actual": 100.76,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1003",
+          "expected": 139.18,
+          "actual": 139.18,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1005",
+          "expected": 145.58,
+          "actual": 145.58,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1006",
+          "expected": 79.5,
+          "actual": 79.5,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1007",
+          "expected": 111.67,
+          "actual": 111.67,
+          "difference": 0,
+          "matches": true
+        },
+        {
+          "recordId": "ord-1008",
+          "expected": 103.91,
+          "actual": 103.91,
+          "difference": 0,
+          "matches": true
+        }
+      ],
+      "excludedOrders": 1,
+      "excludedNonSettledPayments": 0
+    },
+    "totalSettledPayments": 760.98,
+    "totalRefunds": 82.7
+  },
+  "summaries": {
+    "byRestaurant": [
+      {
+        "restaurantId": "rest-1",
+        "restaurantName": "Olive & Ember",
+        "orderCount": 3,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 331.23,
+        "settledPayments": 331.23,
+        "refunds": 54.3
+      },
+      {
+        "restaurantId": "rest-2",
+        "restaurantName": "Harbor Table",
+        "orderCount": 3,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 350.25,
+        "settledPayments": 350.25,
+        "refunds": 28.4
+      },
+      {
+        "restaurantId": "rest-3",
+        "restaurantName": "Saffron Lane",
+        "orderCount": 2,
+        "cancelledOrderCount": 1,
+        "grossRevenue": 79.5,
+        "settledPayments": 79.5,
+        "refunds": 0
+      }
+    ],
+    "byDay": [
+      {
+        "date": "2025-01-08",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 80.38,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-10",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 100.76,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-12",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 139.18,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-13",
+        "orderCount": 0,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 0,
+        "refunds": 54.3
+      },
+      {
+        "date": "2025-01-14",
+        "orderCount": 1,
+        "cancelledOrderCount": 1,
+        "grossRevenue": 0,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-15",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 145.58,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-16",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 79.5,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-18",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 111.67,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-19",
+        "orderCount": 1,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 103.91,
+        "refunds": 0
+      },
+      {
+        "date": "2025-01-20",
+        "orderCount": 0,
+        "cancelledOrderCount": 0,
+        "grossRevenue": 0,
+        "refunds": 28.4
+      }
+    ]
+  },
+  "importantFindings": [
+    {
+      "type": "validation",
+      "recordId": "bad-1",
+      "categoryOrMetric": "known_invalid_fixture",
+      "severity": "error",
+      "expectedBaseline": true,
+      "explanation": "Known invalid fixture for validation tests: negative subtotal."
+    },
+    {
+      "type": "validation",
+      "recordId": "bad-2",
+      "categoryOrMetric": "known_invalid_fixture",
+      "severity": "error",
+      "expectedBaseline": true,
+      "explanation": "Known invalid fixture for validation tests: tax exceeds subtotal."
+    },
+    {
+      "type": "validation",
+      "recordId": "bad-3",
+      "categoryOrMetric": "known_invalid_fixture",
+      "severity": "warning",
+      "expectedBaseline": true,
+      "explanation": "Known invalid fixture for validation tests: refund without payment."
+    },
+    {
+      "type": "validation",
+      "recordId": "bad-4",
+      "categoryOrMetric": "known_invalid_fixture",
+      "severity": "warning",
+      "expectedBaseline": true,
+      "explanation": "Known invalid fixture for validation tests: future-dated order."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1001",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1002",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1003",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1004",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1005",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    },
+    {
+      "type": "validation",
+      "recordId": "ord-1006",
+      "categoryOrMetric": "invalid_total",
+      "severity": "warning",
+      "expectedBaseline": false,
+      "explanation": "Line item totals do not reconcile to the order subtotal; this indicates a potential data-quality issue or missing adjustments."
+    }
+  ],
+  "assumptionsAndLimitations": [
+    "This report is generated only from the deterministic, local synthetic fixture and does not read production data or call live services.",
+    "Records analyzed counts each row in each fixture collection, including separately stored known-invalid rows; these may represent intentional corruptions rather than independent production records.",
+    "Validation category counts count findings and distinct affected records within each category. The same record can appear in multiple categories, so category counts should not be summed to derive unique affected records.",
+    "Records with validation errors counts distinct record-type/identifier pairs with error or critical findings. Warning records exclude records already counted as errors.",
+    "Order-total reconciliation applies subtotal minus discount plus tax with a one-cent tolerance, matching the fixture validator's stated formula.",
+    "Payment reconciliation compares settled payments with the gross total for paid or refunded orders. Cancelled and other order states are excluded; refunds are reported separately because a refund does not change the original captured payment.",
+    "Daily revenue is grouped by order date and excludes cancelled orders. Refunds are grouped by refund date. Sparse fixture dates are not a meaningful production trend baseline.",
+    "Statistical anomalies are heuristic flags, not confirmed data defects or fraud; the fixture is too small for strong statistical inference."
+  ]
+}

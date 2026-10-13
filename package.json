@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest --run",
     "test:watch": "vitest --watch",
+    "analytics:report": "vite-node --script scripts/generate-analytics-report.ts",
     "check:keys": "node scripts/check-supabase-keys.mjs",
     "format": "prettier --write ."
   },
