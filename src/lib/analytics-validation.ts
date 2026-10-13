@@ -13,27 +13,48 @@ export type ValidationFinding = {
   category:
     | "duplicate_id"
     | "missing_value"
+    | "missing_required_field"
     | "broken_reference"
+    | "invalid_data_type"
     | "invalid_total"
     | "payment_mismatch"
     | "refund_mismatch"
     | "invalid_status"
+    | "unsupported_status"
     | "timestamp_issue"
     | "cross_restaurant"
+    | "ambiguous_rule"
+    | "not_evaluable"
     | "known_invalid_fixture";
   recordType:
-    "restaurant" | "menu_item" | "order" | "order_item" | "payment" | "refund" | "invalid_row";
+    | "restaurant"
+    | "menu_item"
+    | "order"
+    | "order_item"
+    | "payment"
+    | "refund"
+    | "invalid_row"
+    | "dataset";
   recordId?: string;
+  recordIdentifier?: string;
+  ruleId?: string;
+  rule?: string;
   message: string;
   expected?: string | number | boolean | null;
+  expectedCondition?: string | number | boolean | null;
   actual?: string | number | boolean | null;
+  observedValue?: unknown;
+  recommendation?: string;
+  evaluationStatus?: "evaluated" | "not_evaluated" | "ambiguous";
   isExpectedBaseline?: boolean;
 };
 
+export type DataQualityFinding = ValidationFinding;
+
 export type StatisticalAnomaly = {
   metric: string;
-  recordId?: string;
-  restaurantId?: string;
+  recordId?: string | undefined;
+  restaurantId?: string | undefined;
   value: number;
   baselineMedian: number;
   baselineMean: number;
@@ -85,6 +106,28 @@ function parseDate(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function normalizeFinding(finding: ValidationFinding): ValidationFinding {
+  const expectedCondition =
+    finding.expectedCondition ??
+    (typeof finding.expected === "undefined" ? null : finding.expected);
+  const observedValue = finding.observedValue ?? finding.actual ?? null;
+  const recordIdentifier = finding.recordIdentifier ?? finding.recordId ?? "unknown";
+  const recommendation =
+    finding.recommendation ??
+    "Review the source record and compare it against the expected invariant for the relevant business rule.";
+
+  return {
+    ...finding,
+    ruleId: finding.ruleId ?? finding.rule ?? finding.category,
+    recordIdentifier,
+    recordId: finding.recordId ?? recordIdentifier,
+    expectedCondition,
+    observedValue,
+    recommendation,
+    evaluationStatus: finding.evaluationStatus ?? "evaluated",
+  };
+}
+
 function calculateExpectedTotal(order: OrderRecord) {
   return roundCurrency(order.subtotal - order.discount_amount + order.tax);
 }
@@ -106,15 +149,18 @@ function getSortedValues(values: number[]) {
   return [...values].sort((a, b) => a - b);
 }
 
-function percentile(sorted: number[], fraction: number) {
+function percentile(sorted: number[], fraction: number): number {
   if (sorted.length === 0) return 0;
-  if (sorted.length === 1) return sorted[0];
+  const firstValue = sorted[0]!;
+  if (sorted.length === 1) return firstValue;
 
   const index = (sorted.length - 1) * fraction;
   const lower = Math.floor(index);
   const upper = Math.ceil(index);
   const weight = index - lower;
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+  const lowerValue = sorted[lower] ?? firstValue;
+  const upperValue = sorted[upper] ?? sorted[sorted.length - 1]!;
+  return lowerValue * (1 - weight) + upperValue * weight;
 }
 
 export function detectStatisticalAnomaliesForMetric(
@@ -122,7 +168,7 @@ export function detectStatisticalAnomaliesForMetric(
   metric: string,
   restaurantId?: string,
   recordId?: string,
-) {
+): StatisticalAnomaly[] {
   const cleanValues = values.filter((value) => Number.isFinite(value));
   if (cleanValues.length < 3) return [];
 
@@ -130,15 +176,21 @@ export function detectStatisticalAnomaliesForMetric(
   const median = percentile(sorted, 0.5);
   const q1 = percentile(sorted, 0.25);
   const q3 = percentile(sorted, 0.75);
-  const iqr = Math.max(0, q3 - q1);
+  const lowerQuartile = q1 ?? median;
+  const upperQuartile = q3 ?? median;
+  const iqr = Math.max(0, upperQuartile - lowerQuartile);
   const mean = cleanValues.reduce((sum, item) => sum + item, 0) / cleanValues.length;
   const variance =
     cleanValues.reduce((sum, item) => sum + (item - mean) ** 2, 0) / cleanValues.length;
   const stdDev = Math.sqrt(variance);
 
-  const lowerBound = q1 - 1.5 * iqr;
-  const upperBound = q3 + 1.5 * iqr;
+  const lowerBound = lowerQuartile - 1.5 * iqr;
+  const upperBound = upperQuartile + 1.5 * iqr;
   const anomalies: StatisticalAnomaly[] = [];
+
+  if (!Number.isFinite(lowerBound) || !Number.isFinite(upperBound)) {
+    return [];
+  }
 
   for (const value of cleanValues) {
     if (value >= lowerBound && value <= upperBound) continue;
@@ -153,19 +205,21 @@ export function detectStatisticalAnomaliesForMetric(
         ? `Value ${value} is outside the restaurant baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] and is ${zScore.toFixed(2)} standard deviations from the mean.`
         : `Value ${value} is outside the restaurant baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] using the median/IQR rule.`;
 
-    anomalies.push({
+    const anomaly: StatisticalAnomaly = {
       metric,
-      recordId,
+      recordId: recordId ?? undefined,
       restaurantId,
       value,
       baselineMedian: median,
       baselineMean: mean,
       lowerBound,
       upperBound,
-      zScore,
+      zScore: zScore ?? 0,
       severity: stdDev > 0 && zScore !== undefined && zScore > 3 ? "error" : "warning",
       explanation,
-    });
+    };
+
+    anomalies.push(anomaly);
   }
 
   return anomalies;
@@ -749,6 +803,8 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
     return Math.abs(paymentTotal - expected) > 0.01;
   });
 
+  const normalizedFindings = findings.map(normalizeFinding);
+
   const report: AnalyticsValidationReport = {
     metadata: {
       seed: dataset.metadata.seed,
@@ -771,7 +827,7 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
       findingsBySeverity,
       findingsByCategory,
     },
-    findings,
+    findings: normalizedFindings,
     anomalies: detectStatisticalAnomalies(dataset),
     reconciliations: {
       totalGrossRevenue,
@@ -784,6 +840,18 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
   };
 
   return report;
+}
+
+export function validateDataQuality(dataset: SyntheticDataset): AnalyticsValidationReport {
+  return validateAnalyticsDataset(dataset);
+}
+
+export function validateDataset(dataset: SyntheticDataset): AnalyticsValidationReport {
+  return validateAnalyticsDataset(dataset);
+}
+
+export function buildValidationReport(dataset: SyntheticDataset): AnalyticsValidationReport {
+  return validateAnalyticsDataset(dataset);
 }
 
 export function createAnalyticsValidationJson(dataset: SyntheticDataset) {

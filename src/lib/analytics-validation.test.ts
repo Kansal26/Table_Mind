@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { syntheticDataset } from "./synthetic-dataset";
+import { syntheticDataset, type SyntheticDataset } from "./synthetic-dataset";
 import {
   createExpectedCleanSubset,
   detectStatisticalAnomalies,
   detectStatisticalAnomaliesForMetric,
   validateAnalyticsDataset,
+  validateDataQuality,
 } from "./analytics-validation";
 
-function createCleanDataset() {
+function createCleanDataset(): SyntheticDataset {
   return {
     ...syntheticDataset,
     restaurants: [
@@ -119,6 +120,18 @@ function createCleanDataset() {
 }
 
 describe("analytics validation", () => {
+  it("exposes a reusable dataset-level validation interface and finding metadata", () => {
+    const report = validateDataQuality(createCleanDataset());
+    expect(report.findings.length).toBeGreaterThanOrEqual(0);
+    const firstFinding = report.findings[0];
+    if (firstFinding) {
+      expect(firstFinding.ruleId ?? firstFinding.category).toBeTruthy();
+      expect(firstFinding.recordIdentifier ?? firstFinding.recordId).toBeTruthy();
+      expect(firstFinding.expectedCondition ?? firstFinding.expected ?? null).not.toBeUndefined();
+      expect(firstFinding.recommendation).toBeTruthy();
+    }
+  });
+
   it("accepts a clean local fixture without integrity findings", () => {
     const cleanDataset = createCleanDataset();
     const report = validateAnalyticsDataset(cleanDataset);
@@ -129,7 +142,14 @@ describe("analytics validation", () => {
 
   it("flags duplicate identifiers and broken references", () => {
     const broken = createCleanDataset();
-    broken.orders.push({ ...broken.orders[0], id: broken.orders[1].id });
+    const nextOrder = broken.orders[1];
+    if (!nextOrder) {
+      throw new Error("Expected at least two orders in test fixture.");
+    }
+    broken.orders.push({
+      ...broken.orders[0],
+      id: nextOrder.id,
+    } as (typeof broken.orders)[number]);
     broken.orderItems.push({
       id: "bad-line",
       order_id: "missing-order",
@@ -172,17 +192,25 @@ describe("analytics validation", () => {
     broken.orders[0] = {
       ...broken.orders[0],
       id: "bad-total-order",
+      restaurant_id: "rest-1",
+      table_label: "A1",
+      ordered_at: "2025-01-08T18:10:00Z",
+      status: "paid",
       subtotal: 30,
       discount_amount: 0,
       tax: 2,
       total: 50,
       payment_status: "paid",
+      isValid: true,
     };
     broken.payments[0] = {
       ...broken.payments[0],
       id: "bad-payment",
       order_id: "bad-total-order",
       amount: 20,
+      method: "card",
+      status: "settled",
+      created_at: "2025-01-08T18:40:00Z",
     };
     broken.refunds = [
       {
@@ -218,8 +246,16 @@ describe("analytics validation", () => {
     broken.orders[0] = {
       ...broken.orders[0],
       id: "bad-time-order",
-      ordered_at: "2099-01-01T00:00:00Z",
       restaurant_id: "rest-1",
+      table_label: "A1",
+      ordered_at: "2099-01-01T00:00:00Z",
+      status: "paid",
+      subtotal: 35,
+      discount_amount: 0,
+      tax: 2.96,
+      total: 37.96,
+      payment_status: "paid",
+      isValid: true,
     };
     broken.orderItems.push({
       id: "cross-restaurant-line",
@@ -248,11 +284,11 @@ describe("analytics validation", () => {
   it("detects anomalies with deterministic rules and ignores zero-variance or tiny samples", () => {
     const outlierDataset = createCleanDataset();
     outlierDataset.orders = [
-      { ...outlierDataset.orders[0], id: "o-1", total: 100 },
-      { ...outlierDataset.orders[0], id: "o-2", total: 110 },
-      { ...outlierDataset.orders[0], id: "o-3", total: 105 },
-      { ...outlierDataset.orders[0], id: "o-4", total: 120 },
-      { ...outlierDataset.orders[0], id: "o-5", total: 600 },
+      { ...outlierDataset.orders[0], id: "o-1", total: 100, restaurant_id: "rest-1", table_label: "A1", ordered_at: "2025-01-08T18:10:00Z", status: "paid", subtotal: 100, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
+      { ...outlierDataset.orders[0], id: "o-2", total: 110, restaurant_id: "rest-1", table_label: "A2", ordered_at: "2025-01-08T18:11:00Z", status: "paid", subtotal: 110, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
+      { ...outlierDataset.orders[0], id: "o-3", total: 105, restaurant_id: "rest-1", table_label: "A3", ordered_at: "2025-01-08T18:12:00Z", status: "paid", subtotal: 105, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
+      { ...outlierDataset.orders[0], id: "o-4", total: 120, restaurant_id: "rest-1", table_label: "A4", ordered_at: "2025-01-08T18:13:00Z", status: "paid", subtotal: 120, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
+      { ...outlierDataset.orders[0], id: "o-5", total: 600, restaurant_id: "rest-1", table_label: "A5", ordered_at: "2025-01-08T18:14:00Z", status: "paid", subtotal: 600, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
     ];
     outlierDataset.orderItems = [
       {
