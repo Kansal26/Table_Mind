@@ -51,18 +51,35 @@ export type ValidationFinding = {
 
 export type DataQualityFinding = ValidationFinding;
 
+export type AnomalyThresholds = {
+  minSamples: number;
+  iqrMultiplier: number;
+  zScoreThreshold: number;
+  dailyRevenueZScoreThreshold: number;
+};
+
 export type StatisticalAnomaly = {
   metric: string;
   recordId?: string | undefined;
   restaurantId?: string | undefined;
+  comparisonGroup?: string;
   value: number;
   baselineMedian: number;
   baselineMean: number;
   lowerBound?: number;
   upperBound?: number;
   zScore?: number;
+  threshold?: number;
+  method?: "IQR" | "z-score" | "rate-delta";
   severity: "info" | "warning" | "error";
   explanation: string;
+};
+
+const DEFAULT_ANOMALY_THRESHOLDS: AnomalyThresholds = {
+  minSamples: 3,
+  iqrMultiplier: 1.5,
+  zScoreThreshold: 3,
+  dailyRevenueZScoreThreshold: 2.5,
 };
 
 export type AnalyticsValidationReport = {
@@ -168,9 +185,11 @@ export function detectStatisticalAnomaliesForMetric(
   metric: string,
   restaurantId?: string,
   recordId?: string,
+  thresholds: Partial<AnomalyThresholds> = {},
 ): StatisticalAnomaly[] {
+  const config = { ...DEFAULT_ANOMALY_THRESHOLDS, ...thresholds };
   const cleanValues = values.filter((value) => Number.isFinite(value));
-  if (cleanValues.length < 3) return [];
+  if (cleanValues.length < config.minSamples) return [];
 
   const sorted = getSortedValues(cleanValues);
   const median = percentile(sorted, 0.5);
@@ -184,8 +203,8 @@ export function detectStatisticalAnomaliesForMetric(
     cleanValues.reduce((sum, item) => sum + (item - mean) ** 2, 0) / cleanValues.length;
   const stdDev = Math.sqrt(variance);
 
-  const lowerBound = lowerQuartile - 1.5 * iqr;
-  const upperBound = upperQuartile + 1.5 * iqr;
+  const lowerBound = lowerQuartile - config.iqrMultiplier * iqr;
+  const upperBound = upperQuartile + config.iqrMultiplier * iqr;
   const anomalies: StatisticalAnomaly[] = [];
 
   if (!Number.isFinite(lowerBound) || !Number.isFinite(upperBound)) {
@@ -202,20 +221,23 @@ export function detectStatisticalAnomaliesForMetric(
 
     const explanation =
       stdDev > 0 && zScore !== undefined
-        ? `Value ${value} is outside the restaurant baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] and is ${zScore.toFixed(2)} standard deviations from the mean.`
-        : `Value ${value} is outside the restaurant baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] using the median/IQR rule.`;
+        ? `Value ${value} is outside the baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] (IQR multiplier ${config.iqrMultiplier}). This is a statistical flag only, not a confirmed defect; it is ${zScore.toFixed(2)} standard deviations from the mean.`
+        : `Value ${value} is outside the baseline range [${lowerBound.toFixed(2)}, ${upperBound.toFixed(2)}] using the IQR rule. This is a statistical flag only, not a confirmed defect.`;
 
     const anomaly: StatisticalAnomaly = {
       metric,
       recordId: recordId ?? undefined,
       restaurantId,
+      comparisonGroup: restaurantId ? `restaurant:${restaurantId}` : "overall",
       value,
       baselineMedian: median,
       baselineMean: mean,
       lowerBound,
       upperBound,
       zScore: zScore ?? 0,
-      severity: stdDev > 0 && zScore !== undefined && zScore > 3 ? "error" : "warning",
+      threshold: config.iqrMultiplier,
+      method: "IQR",
+      severity: stdDev > 0 && zScore !== undefined && zScore > config.zScoreThreshold ? "error" : "warning",
       explanation,
     };
 
@@ -225,7 +247,93 @@ export function detectStatisticalAnomaliesForMetric(
   return anomalies;
 }
 
-export function detectStatisticalAnomalies(dataset: SyntheticDataset) {
+function detectRestaurantDailyRevenueAnomalies(dataset: SyntheticDataset, thresholds: AnomalyThresholds) {
+  const validOrders = dataset.orders.filter((order) => order.isValid !== false);
+  const dailyRevenueByRestaurant = new Map<string, { date: string; total: number }[]>();
+
+  for (const order of validOrders) {
+    const orderDate = order.ordered_at.slice(0, 10);
+    const list = dailyRevenueByRestaurant.get(order.restaurant_id) ?? [];
+    list.push({ date: orderDate, total: order.total });
+    dailyRevenueByRestaurant.set(order.restaurant_id, list);
+  }
+
+  const anomalies: StatisticalAnomaly[] = [];
+
+  for (const [restaurantId, records] of dailyRevenueByRestaurant.entries()) {
+    const values = records.map((entry) => entry.total);
+    if (values.length < thresholds.minSamples) continue;
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    if (stdDev === 0) continue;
+
+    for (const record of records) {
+      const zScore = Math.abs((record.total - mean) / stdDev);
+      if (zScore <= thresholds.dailyRevenueZScoreThreshold) continue;
+
+      anomalies.push({
+        metric: "daily_revenue_change",
+        restaurantId,
+        comparisonGroup: `restaurant:${restaurantId}`,
+        value: record.total,
+        baselineMedian: median(values),
+        baselineMean: mean,
+        zScore,
+        threshold: thresholds.dailyRevenueZScoreThreshold,
+        method: "z-score",
+        severity: zScore > thresholds.zScoreThreshold ? "error" : "warning",
+        explanation: `Daily revenue for ${record.date} in ${restaurantId} is ${zScore.toFixed(2)} standard deviations from the restaurant mean; this is a statistical flag and should be checked against context before concluding a defect.`,
+      });
+    }
+  }
+
+  return anomalies;
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    const left = sorted[mid - 1] ?? sorted[0]!;
+    const right = sorted[mid] ?? sorted[sorted.length - 1]!;
+    return (left + right) / 2;
+  }
+  return sorted[mid] ?? sorted[0]!;
+}
+
+function detectPaymentGapAnomalies(dataset: SyntheticDataset, thresholds: AnomalyThresholds) {
+  const values: { orderId: string; restaurantId: string; gap: number }[] = [];
+  for (const order of dataset.orders.filter((item) => item.isValid !== false)) {
+    const paymentTotal = dataset.payments
+      .filter((payment) => payment.order_id === order.id)
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    const gap = Math.abs(paymentTotal - order.total);
+    if (gap > 0) values.push({ orderId: order.id, restaurantId: order.restaurant_id, gap });
+  }
+
+  if (values.length < thresholds.minSamples) return [];
+  const gaps = values.map((entry) => entry.gap);
+  const result = detectStatisticalAnomaliesForMetric(gaps, "payment_gap", undefined, undefined, thresholds);
+  return result.map((anomaly) => {
+    const match = values.find((entry) => entry.gap === anomaly.value);
+    return {
+      ...anomaly,
+      metric: "payment_gap",
+      recordId: match?.orderId,
+      restaurantId: match?.restaurantId,
+      comparisonGroup: match ? `restaurant:${match.restaurantId}` : "overall",
+      explanation: `Payment variance for order ${match?.orderId ?? "unknown"} is ${anomaly.value.toFixed(2)} versus the baseline; this is a statistical flag, not a confirmed accounting defect.`,
+    };
+  });
+}
+
+export function detectExplainableAnomalies(
+  dataset: SyntheticDataset,
+  thresholds: Partial<AnomalyThresholds> = {},
+): StatisticalAnomaly[] {
+  const config = { ...DEFAULT_ANOMALY_THRESHOLDS, ...thresholds };
   const validOrders = dataset.orders.filter((order) => order.isValid !== false);
   const anomalies: StatisticalAnomaly[] = [];
 
@@ -237,7 +345,7 @@ export function detectStatisticalAnomalies(dataset: SyntheticDataset) {
   }
 
   for (const [restaurantId, values] of orderTotalsByRestaurant.entries()) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(values, "order_total", restaurantId));
+    anomalies.push(...detectStatisticalAnomaliesForMetric(values, "order_total", restaurantId, undefined, config));
   }
 
   const quantityValues: number[] = [];
@@ -247,19 +355,26 @@ export function detectStatisticalAnomalies(dataset: SyntheticDataset) {
       .reduce((sum, item) => sum + item.qty, 0);
     quantityValues.push(orderQty);
   }
-  anomalies.push(...detectStatisticalAnomaliesForMetric(quantityValues, "order_quantity"));
+  anomalies.push(...detectStatisticalAnomaliesForMetric(quantityValues, "order_quantity", undefined, undefined, config));
 
   const refundValues = dataset.refunds.map((refund) => refund.amount);
-  if (refundValues.length >= 3) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(refundValues, "refund_amount"));
+  if (refundValues.length >= config.minSamples) {
+    anomalies.push(...detectStatisticalAnomaliesForMetric(refundValues, "refund_amount", undefined, undefined, config));
   }
 
   const cancellationValues = validOrders.map((order) => (order.status === "cancelled" ? 1 : 0));
-  if (cancellationValues.length >= 3) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(cancellationValues, "cancellation_flag"));
+  if (cancellationValues.length >= config.minSamples) {
+    anomalies.push(...detectStatisticalAnomaliesForMetric(cancellationValues, "cancellation_flag", undefined, undefined, config));
   }
 
+  anomalies.push(...detectRestaurantDailyRevenueAnomalies(dataset, config));
+  anomalies.push(...detectPaymentGapAnomalies(dataset, config));
+
   return anomalies.filter((anomaly) => Number.isFinite(anomaly.value));
+}
+
+export function detectStatisticalAnomalies(dataset: SyntheticDataset, thresholds: Partial<AnomalyThresholds> = {}) {
+  return detectExplainableAnomalies(dataset, thresholds);
 }
 
 export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsValidationReport {

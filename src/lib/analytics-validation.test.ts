@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { syntheticDataset, type SyntheticDataset } from "./synthetic-dataset";
 import {
   createExpectedCleanSubset,
+  detectExplainableAnomalies,
   detectStatisticalAnomalies,
   detectStatisticalAnomaliesForMetric,
   validateAnalyticsDataset,
@@ -283,12 +284,81 @@ describe("analytics validation", () => {
 
   it("detects anomalies with deterministic rules and ignores zero-variance or tiny samples", () => {
     const outlierDataset = createCleanDataset();
+    const baseOrder = outlierDataset.orders[0];
+    if (!baseOrder) {
+      throw new Error("Expected at least one base order in the test fixture.");
+    }
     outlierDataset.orders = [
-      { ...outlierDataset.orders[0], id: "o-1", total: 100, restaurant_id: "rest-1", table_label: "A1", ordered_at: "2025-01-08T18:10:00Z", status: "paid", subtotal: 100, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
-      { ...outlierDataset.orders[0], id: "o-2", total: 110, restaurant_id: "rest-1", table_label: "A2", ordered_at: "2025-01-08T18:11:00Z", status: "paid", subtotal: 110, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
-      { ...outlierDataset.orders[0], id: "o-3", total: 105, restaurant_id: "rest-1", table_label: "A3", ordered_at: "2025-01-08T18:12:00Z", status: "paid", subtotal: 105, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
-      { ...outlierDataset.orders[0], id: "o-4", total: 120, restaurant_id: "rest-1", table_label: "A4", ordered_at: "2025-01-08T18:13:00Z", status: "paid", subtotal: 120, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
-      { ...outlierDataset.orders[0], id: "o-5", total: 600, restaurant_id: "rest-1", table_label: "A5", ordered_at: "2025-01-08T18:14:00Z", status: "paid", subtotal: 600, discount_amount: 0, tax: 0, payment_status: "paid", isValid: true } as (typeof outlierDataset.orders)[number],
+      {
+        ...baseOrder,
+        id: "o-1",
+        total: 100,
+        restaurant_id: "rest-1",
+        table_label: "A1",
+        ordered_at: "2025-01-08T18:10:00Z",
+        status: "paid",
+        subtotal: 100,
+        discount_amount: 0,
+        tax: 0,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "o-2",
+        total: 110,
+        restaurant_id: "rest-1",
+        table_label: "A2",
+        ordered_at: "2025-01-08T18:11:00Z",
+        status: "paid",
+        subtotal: 110,
+        discount_amount: 0,
+        tax: 0,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "o-3",
+        total: 105,
+        restaurant_id: "rest-1",
+        table_label: "A3",
+        ordered_at: "2025-01-08T18:12:00Z",
+        status: "paid",
+        subtotal: 105,
+        discount_amount: 0,
+        tax: 0,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "o-4",
+        total: 120,
+        restaurant_id: "rest-1",
+        table_label: "A4",
+        ordered_at: "2025-01-08T18:13:00Z",
+        status: "paid",
+        subtotal: 120,
+        discount_amount: 0,
+        tax: 0,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "o-5",
+        total: 600,
+        restaurant_id: "rest-1",
+        table_label: "A5",
+        ordered_at: "2025-01-08T18:14:00Z",
+        status: "paid",
+        subtotal: 600,
+        discount_amount: 0,
+        tax: 0,
+        payment_status: "paid",
+        isValid: true,
+      },
     ];
     outlierDataset.orderItems = [
       {
@@ -352,6 +422,111 @@ describe("analytics validation", () => {
     const tinySample = detectStatisticalAnomaliesForMetric([10, 11, 12], "order_total");
     expect(normal).toEqual([]);
     expect(tinySample).toEqual([]);
+  });
+
+  it("uses explainable, configurable statistical thresholds for known anomalies", () => {
+    const dataset = createCleanDataset();
+    const baseOrder = dataset.orders[0];
+    if (!baseOrder) {
+      throw new Error("Expected at least one base order in the clean dataset fixture.");
+    }
+
+    dataset.orders = [
+      {
+        ...baseOrder,
+        id: "x-1",
+        restaurant_id: "rest-1",
+        table_label: "A1",
+        ordered_at: "2025-01-08T18:10:00Z",
+        status: "paid",
+        subtotal: 100,
+        discount_amount: 0,
+        tax: 0,
+        total: 100,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "x-2",
+        restaurant_id: "rest-1",
+        table_label: "A2",
+        ordered_at: "2025-01-08T18:11:00Z",
+        status: "paid",
+        subtotal: 110,
+        discount_amount: 0,
+        tax: 0,
+        total: 110,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "x-3",
+        restaurant_id: "rest-1",
+        table_label: "A3",
+        ordered_at: "2025-01-08T18:12:00Z",
+        status: "paid",
+        subtotal: 105,
+        discount_amount: 0,
+        tax: 0,
+        total: 105,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "x-4",
+        restaurant_id: "rest-1",
+        table_label: "A4",
+        ordered_at: "2025-01-08T18:13:00Z",
+        status: "paid",
+        subtotal: 120,
+        discount_amount: 0,
+        tax: 0,
+        total: 120,
+        payment_status: "paid",
+        isValid: true,
+      },
+      {
+        ...baseOrder,
+        id: "x-5",
+        restaurant_id: "rest-1",
+        table_label: "A5",
+        ordered_at: "2025-01-08T18:14:00Z",
+        status: "paid",
+        subtotal: 600,
+        discount_amount: 0,
+        tax: 0,
+        total: 600,
+        payment_status: "paid",
+        isValid: true,
+      },
+    ];
+    dataset.payments = dataset.orders.map((order, index) => ({
+      id: `pay-x-${index}`,
+      order_id: order.id,
+      amount: order.total,
+      method: "card",
+      status: "settled",
+      created_at: order.ordered_at,
+    }));
+
+    const anomalies = detectExplainableAnomalies(dataset, {
+      minSamples: 3,
+      iqrMultiplier: 1.5,
+      zScoreThreshold: 3,
+      dailyRevenueZScoreThreshold: 2.5,
+    });
+
+    const orderAnomaly = anomalies.find(
+      (anomaly) => anomaly.metric === "order_total" && anomaly.comparisonGroup === "restaurant:rest-1",
+    );
+
+    expect(orderAnomaly).toBeDefined();
+    expect(orderAnomaly?.method).toBe("IQR");
+    expect(orderAnomaly?.threshold).toBe(1.5);
+    expect(orderAnomaly?.explanation).toContain("statistical flag");
   });
 
   it("reuses committed fixtures for a deterministic report object", () => {
