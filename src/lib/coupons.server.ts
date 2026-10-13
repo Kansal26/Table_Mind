@@ -29,7 +29,7 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
 
   if (!order || !order.session || !(order.session as any).tables) return [];
   const restaurantId = (order.session as any).tables.restaurant_id;
-  
+
   if (subtotal === 0) return []; // No discounts on empty cart
 
   // Fetch all active coupons for this restaurant
@@ -38,13 +38,24 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
     .select("*")
     .eq("restaurant_id", restaurantId)
     .eq("active", true);
-  
+
   if (!couponsData || couponsData.length === 0) return [];
 
   const coupons = couponsData as any as Coupon[];
   const eligible: Array<Coupon & { calculated_discount: number }> = [];
+  const now = new Date();
 
   for (const coupon of coupons) {
+    if (coupon.valid_from) {
+      const startDate = new Date(coupon.valid_from);
+      if (Number.isNaN(startDate.getTime()) || startDate > now) continue;
+    }
+
+    if (coupon.valid_to) {
+      const endDate = new Date(coupon.valid_to);
+      if (Number.isNaN(endDate.getTime()) || endDate < now) continue;
+    }
+
     let isEligible = false;
     let discountAmount = 0;
     const rule = coupon.rule_json;
@@ -58,7 +69,7 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
             .select("id", { count: "exact", head: true })
             .eq("user_id", order.user_id)
             .eq("status", "paid");
-          
+
           if (count === 0) {
             isEligible = true;
             discountAmount = subtotal * (rule.discount_pct / 100);
@@ -66,7 +77,7 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
         }
         // If they are a guest, they are NOT eligible (per V1 limitation decision)
         break;
-      
+
       case "min_spend":
         if (subtotal >= rule.amount) {
           isEligible = true;
@@ -82,15 +93,15 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
           discountAmount = (targetItem.menu_item.price * targetItem.qty) * (rule.discount_pct / 100);
         }
         break;
-      
+
       case "time_window":
         // Check if current IST time is within start and end
         const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
-        
+
         const [startH = 0, startM = 0] = rule.start.split(":").map(Number);
         const [endH = 23, endM = 59] = rule.end.split(":").map(Number);
-        
+
         const startMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
