@@ -118,7 +118,12 @@ function roundCurrency(amount: number) {
 }
 
 function parseDate(value: string | null | undefined): Date | null {
-  if (!value) return null;
+  if (
+    !value ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
+  ) {
+    return null;
+  }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -237,7 +242,8 @@ export function detectStatisticalAnomaliesForMetric(
       zScore: zScore ?? 0,
       threshold: config.iqrMultiplier,
       method: "IQR",
-      severity: stdDev > 0 && zScore !== undefined && zScore > config.zScoreThreshold ? "error" : "warning",
+      severity:
+        stdDev > 0 && zScore !== undefined && zScore > config.zScoreThreshold ? "error" : "warning",
       explanation,
     };
 
@@ -247,7 +253,10 @@ export function detectStatisticalAnomaliesForMetric(
   return anomalies;
 }
 
-function detectRestaurantDailyRevenueAnomalies(dataset: SyntheticDataset, thresholds: AnomalyThresholds) {
+function detectRestaurantDailyRevenueAnomalies(
+  dataset: SyntheticDataset,
+  thresholds: AnomalyThresholds,
+) {
   const validOrders = dataset.orders.filter((order) => order.isValid !== false);
   const dailyRevenueByRestaurant = new Map<string, { date: string; total: number }[]>();
 
@@ -315,7 +324,13 @@ function detectPaymentGapAnomalies(dataset: SyntheticDataset, thresholds: Anomal
 
   if (values.length < thresholds.minSamples) return [];
   const gaps = values.map((entry) => entry.gap);
-  const result = detectStatisticalAnomaliesForMetric(gaps, "payment_gap", undefined, undefined, thresholds);
+  const result = detectStatisticalAnomaliesForMetric(
+    gaps,
+    "payment_gap",
+    undefined,
+    undefined,
+    thresholds,
+  );
   return result.map((anomaly) => {
     const match = values.find((entry) => entry.gap === anomaly.value);
     return {
@@ -345,7 +360,15 @@ export function detectExplainableAnomalies(
   }
 
   for (const [restaurantId, values] of orderTotalsByRestaurant.entries()) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(values, "order_total", restaurantId, undefined, config));
+    anomalies.push(
+      ...detectStatisticalAnomaliesForMetric(
+        values,
+        "order_total",
+        restaurantId,
+        undefined,
+        config,
+      ),
+    );
   }
 
   const quantityValues: number[] = [];
@@ -355,16 +378,40 @@ export function detectExplainableAnomalies(
       .reduce((sum, item) => sum + item.qty, 0);
     quantityValues.push(orderQty);
   }
-  anomalies.push(...detectStatisticalAnomaliesForMetric(quantityValues, "order_quantity", undefined, undefined, config));
+  anomalies.push(
+    ...detectStatisticalAnomaliesForMetric(
+      quantityValues,
+      "order_quantity",
+      undefined,
+      undefined,
+      config,
+    ),
+  );
 
   const refundValues = dataset.refunds.map((refund) => refund.amount);
   if (refundValues.length >= config.minSamples) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(refundValues, "refund_amount", undefined, undefined, config));
+    anomalies.push(
+      ...detectStatisticalAnomaliesForMetric(
+        refundValues,
+        "refund_amount",
+        undefined,
+        undefined,
+        config,
+      ),
+    );
   }
 
   const cancellationValues = validOrders.map((order) => (order.status === "cancelled" ? 1 : 0));
   if (cancellationValues.length >= config.minSamples) {
-    anomalies.push(...detectStatisticalAnomaliesForMetric(cancellationValues, "cancellation_flag", undefined, undefined, config));
+    anomalies.push(
+      ...detectStatisticalAnomaliesForMetric(
+        cancellationValues,
+        "cancellation_flag",
+        undefined,
+        undefined,
+        config,
+      ),
+    );
   }
 
   anomalies.push(...detectRestaurantDailyRevenueAnomalies(dataset, config));
@@ -373,7 +420,10 @@ export function detectExplainableAnomalies(
   return anomalies.filter((anomaly) => Number.isFinite(anomaly.value));
 }
 
-export function detectStatisticalAnomalies(dataset: SyntheticDataset, thresholds: Partial<AnomalyThresholds> = {}) {
+export function detectStatisticalAnomalies(
+  dataset: SyntheticDataset,
+  thresholds: Partial<AnomalyThresholds> = {},
+) {
   return detectExplainableAnomalies(dataset, thresholds);
 }
 
@@ -570,7 +620,7 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
     }
 
     const paymentTotal = payments
-      .filter((payment) => payment.order_id === order.id)
+      .filter((payment) => payment.order_id === order.id && payment.status === "settled")
       .reduce((sum, payment) => sum + payment.amount, 0);
     if (order.status === "paid" || order.status === "refunded") {
       if (paymentTotal <= 0) {
@@ -579,12 +629,16 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
           category: "payment_mismatch",
           recordType: "order",
           recordId: order.id,
-          message: "A paid or refunded order is missing a corresponding payment record.",
+          message: "A paid or refunded order is missing a corresponding settled payment.",
           expected: `payment amount > 0 for ${order.status}`,
           actual: paymentTotal,
         });
       }
-      if (Math.abs(paymentTotal - order.total) > 0.01 && order.status === "paid") {
+      if (
+        paymentTotal > 0 &&
+        Math.abs(paymentTotal - order.total) > 0.01 &&
+        order.status === "paid"
+      ) {
         findings.push({
           severity: "warning",
           category: "payment_mismatch",
@@ -767,7 +821,17 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
 
     const paymentDate = parseDate(payment.created_at);
     const orderDate = parseDate(parentOrder.ordered_at);
-    if (paymentDate && orderDate && paymentDate < orderDate) {
+    if (!paymentDate) {
+      findings.push({
+        severity: "error",
+        category: "timestamp_issue",
+        recordType: "payment",
+        recordId: payment.id,
+        message: "Payment timestamp is not a valid ISO-8601 timestamp.",
+        expected: "valid ISO-8601 timestamp",
+        actual: payment.created_at,
+      });
+    } else if (orderDate && paymentDate < orderDate) {
       findings.push({
         severity: "warning",
         category: "timestamp_issue",
@@ -821,7 +885,7 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
     }
 
     const paymentTotal = payments
-      .filter((payment) => payment.order_id === refund.order_id)
+      .filter((payment) => payment.order_id === refund.order_id && payment.status === "settled")
       .reduce((sum, payment) => sum + payment.amount, 0);
 
     if (refund.amount <= 0) {
@@ -850,7 +914,17 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
 
     const refundDate = parseDate(refund.created_at);
     const orderDate = parseDate(parentOrder.ordered_at);
-    if (refundDate && orderDate && refundDate < orderDate) {
+    if (!refundDate) {
+      findings.push({
+        severity: "error",
+        category: "timestamp_issue",
+        recordType: "refund",
+        recordId: refund.id,
+        message: "Refund timestamp is not a valid ISO-8601 timestamp.",
+        expected: "valid ISO-8601 timestamp",
+        actual: refund.created_at,
+      });
+    } else if (orderDate && refundDate < orderDate) {
       findings.push({
         severity: "warning",
         category: "timestamp_issue",
@@ -908,14 +982,11 @@ export function validateAnalyticsDataset(dataset: SyntheticDataset): AnalyticsVa
   const totalRefunds = roundCurrency(refunds.reduce((sum, refund) => sum + refund.amount, 0));
 
   const reconciledMismatches = orders.filter((order) => {
+    if (order.status !== "paid" && order.status !== "refunded") return false;
     const paymentTotal = payments
-      .filter((payment) => payment.order_id === order.id)
+      .filter((payment) => payment.order_id === order.id && payment.status === "settled")
       .reduce((sum, payment) => sum + payment.amount, 0);
-    const refundTotal = refunds
-      .filter((refund) => refund.order_id === order.id)
-      .reduce((sum, refund) => sum + refund.amount, 0);
-    const expected = order.status === "paid" ? order.total : Math.max(0, order.total - refundTotal);
-    return Math.abs(paymentTotal - expected) > 0.01;
+    return Math.abs(paymentTotal - order.total) > 0.01;
   });
 
   const normalizedFindings = findings.map(normalizeFinding);

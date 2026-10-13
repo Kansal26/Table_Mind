@@ -139,6 +139,12 @@ describe("analytics validation", () => {
 
     expect(report.findings.filter((finding) => !finding.isExpectedBaseline)).toEqual([]);
     expect(report.reconciliations.mismatchedOrders).toEqual([]);
+    expect(report.summary.findingsBySeverity).toEqual({
+      info: 0,
+      warning: 0,
+      error: 0,
+      critical: 0,
+    });
   });
 
   it("flags duplicate identifiers and broken references", () => {
@@ -170,6 +176,23 @@ describe("analytics validation", () => {
 
     expect(hasDuplicateOrderId).toBe(true);
     expect(hasBrokenReference).toBe(true);
+    expect(
+      report.findings.find(
+        (finding) => finding.category === "duplicate_id" && finding.recordType === "order",
+      ),
+    ).toMatchObject({
+      severity: "critical",
+      recordId: nextOrder.id,
+      message: "Duplicate order identifier found in the fixture.",
+    });
+    expect(report.summary.findingsBySeverity).toEqual({
+      info: 0,
+      warning: 2,
+      error: 1,
+      critical: 1,
+    });
+    expect(report.summary.findingsByCategory["duplicate_id"]).toBe(1);
+    expect(report.summary.findingsByCategory["broken_reference"]).toBe(1);
   });
 
   it("detects known invalid fixtures from the committed dataset", () => {
@@ -213,6 +236,9 @@ describe("analytics validation", () => {
       status: "settled",
       created_at: "2025-01-08T18:40:00Z",
     };
+    broken.orderItems = broken.orderItems.map((item) =>
+      item.order_id === "clean-order-1" ? { ...item, order_id: "bad-total-order" } : item,
+    );
     broken.refunds = [
       {
         id: "bad-refund",
@@ -236,10 +262,233 @@ describe("analytics validation", () => {
       ),
     ).toBe(true);
     expect(
+      report.findings.find(
+        (finding) =>
+          finding.category === "payment_mismatch" && finding.recordId === "bad-total-order",
+      ),
+    ).toMatchObject({
+      severity: "warning",
+      expected: 50,
+      actual: 20,
+      message: "Paid order total does not match the settled payment total.",
+    });
+    expect(
       report.findings.some(
         (finding) => finding.category === "refund_mismatch" && finding.recordId === "bad-refund",
       ),
     ).toBe(true);
+    expect(
+      report.findings.find(
+        (finding) => finding.category === "refund_mismatch" && finding.recordId === "bad-refund",
+      ),
+    ).toMatchObject({
+      severity: "error",
+      expected: 20,
+      actual: 25,
+      message: "Refund exceeds the total captured payment for the order.",
+    });
+    expect(
+      report.findings.find(
+        (finding) => finding.category === "invalid_total" && finding.recordId === "bad-total-order",
+      ),
+    ).toMatchObject({
+      severity: "error",
+      expected: 32,
+      actual: 50,
+      message: expect.stringContaining("subtotal - discount + tax"),
+    });
+    expect(
+      report.findings.find(
+        (finding) =>
+          finding.category === "invalid_total" &&
+          finding.recordType === "order" &&
+          finding.recordId === "bad-total-order" &&
+          finding.severity === "warning",
+      ),
+    ).toMatchObject({
+      expected: 35,
+      actual: 30,
+      message: expect.stringContaining("Line item totals do not reconcile"),
+    });
+    expect(report.summary.findingsBySeverity.error).toBe(2);
+    expect(report.summary.findingsByCategory["invalid_total"]).toBe(2);
+    expect(report.summary.findingsByCategory["payment_mismatch"]).toBe(1);
+    expect(report.summary.findingsByCategory["refund_mismatch"]).toBe(1);
+  });
+
+  it("reports invalid line-item totals with the independently expected amount", () => {
+    const broken = createCleanDataset();
+    const line = broken.orderItems[0];
+    if (!line) {
+      throw new Error("Expected a line item in the clean dataset fixture.");
+    }
+    broken.orderItems[0] = { ...line, line_total: 19 };
+
+    const report = validateAnalyticsDataset(broken);
+    const finding = report.findings.find(
+      (item) => item.category === "invalid_total" && item.recordId === line.id,
+    );
+
+    expect(finding).toMatchObject({
+      severity: "warning",
+      expected: 20,
+      actual: 19,
+      message: "Order item line total does not equal quantity × unit price.",
+    });
+    expect(report.summary.findingsBySeverity.warning).toBe(2);
+  });
+
+  it("rejects zero quantities and negative discounts with specific error findings", () => {
+    const broken = createCleanDataset();
+    const line = broken.orderItems[0];
+    const order = broken.orders[0];
+    if (!line || !order) {
+      throw new Error("Expected an order and line item in the clean dataset fixture.");
+    }
+    broken.orderItems[0] = { ...line, qty: 0 };
+    broken.orders[0] = {
+      ...order,
+      discount_amount: -2,
+      total: order.subtotal + 2 + order.tax,
+    };
+
+    const report = validateAnalyticsDataset(broken);
+    const quantityFinding = report.findings.find(
+      (item) => item.recordType === "order_item" && item.recordId === line.id,
+    );
+    const discountFinding = report.findings.find(
+      (item) =>
+        item.recordType === "order" &&
+        item.recordId === order.id &&
+        item.category === "invalid_total",
+    );
+
+    expect(quantityFinding).toMatchObject({
+      severity: "error",
+      category: "invalid_total",
+      expected: "qty > 0, unit_price >= 0, line_total >= 0",
+      actual: JSON.stringify({ qty: 0, unit_price: 10, line_total: 20 }),
+      message: "Order item contains invalid quantity or monetary values.",
+    });
+    expect(discountFinding).toMatchObject({
+      severity: "error",
+      category: "invalid_total",
+      actual: JSON.stringify({
+        subtotal: 35,
+        discount_amount: -2,
+        tax: 2.96,
+        total: 39.96,
+      }),
+      message: "Order totals contain negative values.",
+    });
+    expect(report.summary.findingsBySeverity.error).toBe(2);
+  });
+
+  it("flags missing order and menu-item references on an order item", () => {
+    const broken = createCleanDataset();
+    broken.orderItems.push({
+      id: "orphan-line",
+      order_id: "missing-order",
+      menu_item_id: "missing-menu-item",
+      qty: 1,
+      unit_price: 4,
+      line_total: 4,
+    });
+
+    const report = validateAnalyticsDataset(broken);
+    const findings = report.findings.filter((finding) => finding.recordId === "orphan-line");
+
+    expect(findings).toHaveLength(2);
+    expect(findings.map((finding) => finding.message)).toEqual(
+      expect.arrayContaining([
+        "Order item points to a missing order.",
+        "Order item references a menu item that is not present in the fixture.",
+      ]),
+    );
+    expect(findings.every((finding) => finding.severity === "error")).toBe(true);
+    expect(report.summary.findingsByCategory["broken_reference"]).toBe(2);
+  });
+
+  it("does not reconcile a paid order against a pending payment", () => {
+    const broken = createCleanDataset();
+    const payment = broken.payments[0];
+    if (!payment) {
+      throw new Error("Expected a payment in the clean dataset fixture.");
+    }
+    broken.payments[0] = { ...payment, status: "pending" };
+
+    const report = validateAnalyticsDataset(broken);
+    const finding = report.findings.find(
+      (item) => item.category === "payment_mismatch" && item.recordId === payment.order_id,
+    );
+
+    expect(finding).toMatchObject({
+      severity: "error",
+      expected: "payment amount > 0 for paid",
+      actual: 0,
+      message: "A paid or refunded order is missing a corresponding settled payment.",
+    });
+    expect(report.summary.findingsBySeverity.error).toBe(1);
+    expect(report.summary.findingsByCategory["payment_mismatch"]).toBe(1);
+  });
+
+  it("reports malformed order, payment, and refund timestamps", () => {
+    const broken = createCleanDataset();
+    const order = broken.orders[0];
+    const payment = broken.payments[0];
+    if (!order || !payment) {
+      throw new Error("Expected an order and payment in the clean dataset fixture.");
+    }
+    broken.orders[0] = { ...order, ordered_at: "not-a-timestamp" };
+    broken.payments[0] = { ...payment, created_at: "also-not-a-timestamp" };
+    broken.refunds = [
+      {
+        id: "malformed-refund",
+        order_id: order.id,
+        amount: 1,
+        reason: "test",
+        created_at: "invalid-refund-time",
+      },
+    ];
+
+    const report = validateAnalyticsDataset(broken);
+    const timestampFindings = report.findings.filter(
+      (finding) => finding.category === "timestamp_issue",
+    );
+
+    expect(timestampFindings).toHaveLength(3);
+    expect(timestampFindings.map((finding) => finding.recordId)).toEqual(
+      expect.arrayContaining([order.id, payment.id, "malformed-refund"]),
+    );
+    expect(timestampFindings.every((finding) => finding.severity === "error")).toBe(true);
+    expect(report.summary.findingsBySeverity.error).toBe(3);
+  });
+
+  it("reconciles refunded orders against the original captured payment, not the net after refund", () => {
+    const dataset = createCleanDataset();
+    const order = dataset.orders[0];
+    if (!order) {
+      throw new Error("Expected an order in the clean dataset fixture.");
+    }
+    dataset.orders[0] = { ...order, status: "refunded", payment_status: "refunded" };
+    dataset.refunds = [
+      {
+        id: "partial-refund",
+        order_id: order.id,
+        amount: 5,
+        reason: "partial",
+        created_at: "2025-01-09T10:00:00Z",
+      },
+    ];
+
+    const report = validateAnalyticsDataset(dataset);
+
+    expect(report.reconciliations.mismatchedOrders).toEqual([]);
+    expect(
+      report.findings.filter(
+        (finding) => finding.category === "payment_mismatch" && finding.recordId === order.id,
+      ),
+    ).toEqual([]);
   });
 
   it("flags invalid timestamps and cross-restaurant inconsistencies", () => {
@@ -424,6 +673,65 @@ describe("analytics validation", () => {
     expect(tinySample).toEqual([]);
   });
 
+  it("uses restaurant-specific baselines and finds no anomaly in normal observations", () => {
+    const dataset = createCleanDataset();
+    const baseOrder = dataset.orders[0];
+    if (!baseOrder) {
+      throw new Error("Expected an order in the clean dataset fixture.");
+    }
+    const observations = [
+      { restaurantId: "rest-1", values: [10, 11, 12] },
+      { restaurantId: "rest-2", values: [1000, 1100, 1200] },
+    ];
+
+    dataset.orders = observations.flatMap(({ restaurantId, values }) =>
+      values.map((value, index) => ({
+        ...baseOrder,
+        id: `${restaurantId}-order-${index}`,
+        restaurant_id: restaurantId,
+        table_label: `T${index}`,
+        ordered_at: `2025-01-${String(8 + index).padStart(2, "0")}T18:00:00Z`,
+        status: "paid" as const,
+        subtotal: value,
+        discount_amount: 0,
+        tax: 0,
+        total: value,
+        payment_status: "paid" as const,
+        isValid: true,
+      })),
+    );
+    dataset.orderItems = [];
+    dataset.payments = dataset.orders.map((order, index) => ({
+      id: `baseline-payment-${index}`,
+      order_id: order.id,
+      amount: order.total,
+      method: "card",
+      status: "settled",
+      created_at: order.ordered_at,
+    }));
+
+    expect(detectStatisticalAnomalies(dataset)).toEqual([]);
+  });
+
+  it("ignores missing metric observations and explains a finite-value outlier", () => {
+    const anomalies = detectStatisticalAnomaliesForMetric(
+      [10, 11, Number.NaN, 12, Number.POSITIVE_INFINITY, 100],
+      "order_total",
+    );
+
+    expect(anomalies).toHaveLength(1);
+    expect(anomalies[0]).toMatchObject({
+      metric: "order_total",
+      value: 100,
+      lowerBound: -24.125,
+      upperBound: 68.875,
+      method: "IQR",
+      severity: "warning",
+    });
+    expect(anomalies[0]?.explanation).toContain("outside the baseline range");
+    expect(anomalies[0]?.explanation).toContain("statistical flag only");
+  });
+
   it("uses explainable, configurable statistical thresholds for known anomalies", () => {
     const dataset = createCleanDataset();
     const baseOrder = dataset.orders[0];
@@ -520,13 +828,19 @@ describe("analytics validation", () => {
     });
 
     const orderAnomaly = anomalies.find(
-      (anomaly) => anomaly.metric === "order_total" && anomaly.comparisonGroup === "restaurant:rest-1",
+      (anomaly) =>
+        anomaly.metric === "order_total" && anomaly.comparisonGroup === "restaurant:rest-1",
     );
 
-    expect(orderAnomaly).toBeDefined();
-    expect(orderAnomaly?.method).toBe("IQR");
-    expect(orderAnomaly?.threshold).toBe(1.5);
+    expect(orderAnomaly).toMatchObject({
+      value: 600,
+      method: "IQR",
+      threshold: 1.5,
+      comparisonGroup: "restaurant:rest-1",
+      severity: "warning",
+    });
     expect(orderAnomaly?.explanation).toContain("statistical flag");
+    expect(orderAnomaly?.explanation).toContain("IQR multiplier 1.5");
   });
 
   it("reuses committed fixtures for a deterministic report object", () => {

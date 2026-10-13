@@ -84,5 +84,7 @@ npm run lint
 - The implementation uses deterministic arithmetic and rule-based outlier checks; it does not infer hidden business logic from live production data.
 - Order totals are reconciled as `subtotal - discount_amount + tax` within one cent.
 - Payment reconciliation compares settled payments with the gross total of paid/refunded orders. Cancelled orders are excluded; refunds are reported separately and do not reduce original captured-payment totals.
+- Malformed order, payment, and refund timestamps are validation errors. Payment and refund timestamps must be ISO-8601 timestamps with a time and timezone; chronological comparisons are made only when both related timestamps parse.
+- Refunded-order payment reconciliation checks the original settled capture against the original order total. Refund amounts are validated separately against settled captured payments.
 - Daily revenue is grouped by order date and excludes cancelled orders; refund amounts use refund date. Sparse synthetic dates are not a meaningful production trend baseline.
 - Statistical anomalies are heuristic observations, not confirmed defects or fraud; the small fixture limits statistical inference.
