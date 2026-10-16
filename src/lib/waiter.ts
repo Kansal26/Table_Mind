@@ -1,4 +1,9 @@
-import { callWaiterFn, fetchAdminWaiterCallsFn, acknowledgeWaiterCallFn, resolveWaiterCallFn } from "./waiter.functions";
+import {
+  callWaiterFn,
+  fetchAdminWaiterCallsFn,
+  acknowledgeWaiterCallFn,
+  resolveWaiterCallFn,
+} from "./waiter.functions";
 
 export async function callWaiter(qrToken: string, reason: string) {
   return await callWaiterFn({ data: { qrToken, reason } });

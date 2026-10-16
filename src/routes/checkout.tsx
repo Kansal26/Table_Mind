@@ -5,9 +5,22 @@ import { toast } from "sonner";
 import { CheckCircle2, ChevronLeft, Loader2, Sparkles, Tag, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { fetchBill, money, payOrder, createRazorpayOrder, verifyRazorpayPayment, type CartLine } from "@/lib/ordering";
+import {
+  fetchBill,
+  money,
+  payOrder,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  type CartLine,
+} from "@/lib/ordering";
 import { fetchEligibleCoupons, applyCoupon } from "@/lib/coupons";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { claimOrderFn } from "@/lib/account.functions";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,9 +31,9 @@ type CheckoutSearch = { order: string; session: string; table: string };
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: (search: Record<string, unknown>): CheckoutSearch => ({
-    order: String(search['order'] ?? ""),
-    session: String(search['session'] ?? ""),
-    table: String(search['table'] ?? ""),
+    order: String(search["order"] ?? ""),
+    session: String(search["session"] ?? ""),
+    table: String(search["table"] ?? ""),
   }),
   head: () => ({
     meta: [
@@ -74,7 +87,7 @@ function CheckoutPage() {
             queryClient.invalidateQueries({ queryKey: ["checkout", qrToken, orderId] });
             toast.success("Order has been paid by someone at your table!");
           }
-        }
+        },
       )
       .subscribe();
 
@@ -98,7 +111,10 @@ function CheckoutPage() {
   const participantsQuery = useQuery({
     queryKey: ["participants", qrToken, sessionId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("session_participants" as any).select("*").eq("session_id", sessionId);
+      const { data, error } = await supabase
+        .from("session_participants" as any)
+        .select("*")
+        .eq("session_id", sessionId);
       if (error) throw error;
       return data;
     },
@@ -220,12 +236,16 @@ function CheckoutPage() {
       queryClient.removeQueries({ queryKey: ["cart", qrToken, sessionId] });
       queryClient.removeQueries({ queryKey: ["table", qrToken] });
       if (user) {
-        navigate({ to: "/feedback/$orderId", params: { orderId }, search: { table: qrToken, session: sessionId } });
+        navigate({
+          to: "/feedback/$orderId",
+          params: { orderId },
+          search: { table: qrToken, session: sessionId },
+        });
       }
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to process payment");
-    }
+    },
   });
 
   if (orderQuery.isLoading) {
@@ -328,24 +348,37 @@ function CheckoutPage() {
         {participantsQuery.data && participantsQuery.data.length > 1 ? (
           <div className="mt-6 rounded-xl border border-border bg-card shadow-soft overflow-hidden">
             <div className="bg-muted/50 p-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Split By Item</h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                Split By Item
+              </h3>
             </div>
-            
+
             <div className="p-4">
               <div className="space-y-4">
-                {Array.from(new Set(lines.map((l: CartLine) => l.added_by_name))).map(name => {
+                {Array.from(new Set(lines.map((l: CartLine) => l.added_by_name))).map((name) => {
                   const personLines = lines.filter((l: CartLine) => l.added_by_name === name);
-                  const personTotal = personLines.reduce((sum: number, l: CartLine) => sum + l.menu_item.price * l.qty, 0);
+                  const personTotal = personLines.reduce(
+                    (sum: number, l: CartLine) => sum + l.menu_item.price * l.qty,
+                    0,
+                  );
                   return (
-                    <div key={name || "Guest"} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                    <div
+                      key={name || "Guest"}
+                      className="border-b border-border/50 pb-3 last:border-0 last:pb-0"
+                    >
                       <div className="flex justify-between items-baseline mb-2">
                         <p className="font-semibold text-sm text-foreground">{name || "Guest"}</p>
                         <p className="text-sm font-medium">{money(personTotal)}</p>
                       </div>
                       <ul className="space-y-1">
                         {personLines.map((l: CartLine) => (
-                          <li key={l.id} className="flex justify-between text-xs text-muted-foreground">
-                            <span>{l.menu_item.name} x{l.qty}</span>
+                          <li
+                            key={l.id}
+                            className="flex justify-between text-xs text-muted-foreground"
+                          >
+                            <span>
+                              {l.menu_item.name} x{l.qty}
+                            </span>
                             <span>{money(l.menu_item.price * l.qty)}</span>
                           </li>
                         ))}
@@ -411,7 +444,9 @@ function CheckoutPage() {
               <Tag className="size-4" /> Available Offers
             </div>
             {couponsQuery.data.coupons.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No coupons available for this order.</p>
+              <p className="text-sm text-muted-foreground italic">
+                No coupons available for this order.
+              </p>
             ) : applyCouponMutation.isPending ? (
               <div className="flex justify-center py-2">
                 <Loader2 className="size-5 animate-spin text-primary" />
@@ -439,17 +474,21 @@ function CheckoutPage() {
 
         {/* Loyalty Points Section */}
         {(() => {
-          if (!user || !loyaltyQuery.data?.settings || !loyaltyQuery.data?.settings.enabled) return null;
+          if (!user || !loyaltyQuery.data?.settings || !loyaltyQuery.data?.settings.enabled)
+            return null;
           const { settings, balance } = loyaltyQuery.data;
           if (balance <= 0) return null;
           if (order.subtotal < (settings.min_order_value_to_redeem || 0)) return null;
 
           const pointsPerRupee = settings.points_per_rupee || 0;
-          const pointsNeededForFree = pointsPerRupee > 0 ? Math.ceil((order.subtotal - order.discount_amount) / pointsPerRupee) : 0;
+          const pointsNeededForFree =
+            pointsPerRupee > 0
+              ? Math.ceil((order.subtotal - order.discount_amount) / pointsPerRupee)
+              : 0;
           const maxRedeemable = Math.min(
             balance,
             settings.max_points_redeemable_per_order || balance,
-            pointsNeededForFree
+            pointsNeededForFree,
           );
 
           if (maxRedeemable <= 0) return null;
@@ -458,13 +497,15 @@ function CheckoutPage() {
             <div className="mt-6 rounded-xl border border-border bg-card p-4 shadow-soft">
               <div className="mb-2 flex items-center justify-between">
                 <Label className="text-base">Redeem Points</Label>
-                {redeemPointsMutation.isPending && <Loader2 className="size-4 animate-spin text-primary" />}
+                {redeemPointsMutation.isPending && (
+                  <Loader2 className="size-4 animate-spin text-primary" />
+                )}
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                You have <strong>{balance} points</strong> ({money(balance * pointsPerRupee)} value) — 
-                Redeem up to {maxRedeemable} points on this order.
+                You have <strong>{balance} points</strong> ({money(balance * pointsPerRupee)} value)
+                — Redeem up to {maxRedeemable} points on this order.
               </p>
-              
+
               <div className="flex items-center gap-4">
                 <input
                   type="range"
@@ -500,7 +541,10 @@ function CheckoutPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               placeholder="your@email.com"
               value={guestEmail}
-              onChange={(e) => { setGuestEmail(e.target.value); setEmailError(""); }}
+              onChange={(e) => {
+                setGuestEmail(e.target.value);
+                setEmailError("");
+              }}
             />
             {emailError && <p className="mt-1 text-xs text-destructive">{emailError}</p>}
           </div>
@@ -515,9 +559,7 @@ function CheckoutPage() {
           {payMutation.isPending && <Loader2 className="animate-spin mr-2" />}
           Pay {money(order.total)} for the table
         </Button>
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Secured by Razorpay.
-        </p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">Secured by Razorpay.</p>
       </div>
     </main>
   );

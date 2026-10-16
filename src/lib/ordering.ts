@@ -12,7 +12,6 @@ import {
   verifyRazorpayPaymentFn,
 } from "@/lib/ordering.functions";
 
-
 export type MenuItem = {
   id: string;
   name: string;
@@ -77,7 +76,9 @@ export async function joinSession(qrToken: string, deviceToken: string, particip
 export async function fetchMenu(restaurantId: string): Promise<MenuItem[]> {
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, name, description, price, category, allergens, dietary_tags, available, image_url, badge, is_featured, sort_order")
+    .select(
+      "id, name, description, price, category, allergens, dietary_tags, available, image_url, badge, is_featured, sort_order",
+    )
     .eq("restaurant_id", restaurantId)
     .eq("is_deleted", false)
     .order("category", { ascending: true })

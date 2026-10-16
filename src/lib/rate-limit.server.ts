@@ -2,7 +2,7 @@ import { getRequest } from "@tanstack/react-start/server";
 
 // Minimal In-Memory Rate Limiter for Brute-Force Protection
 // IMPORTANT: This in-memory store resets on server restart.
-// For a distributed production system (Vercel/Cloudflare Edge), you MUST upgrade 
+// For a distributed production system (Vercel/Cloudflare Edge), you MUST upgrade
 // to a persistent store like Redis (e.g. Upstash) to share rate limit state across instances.
 
 interface RateLimitData {
@@ -21,9 +21,10 @@ export function rateLimit(userId: string, action: string, limit: number, windowM
   try {
     const req = getRequest();
     if (req) {
-      ip = (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()) 
-        || req.headers.get("x-real-ip") 
-        || "unknown";
+      ip =
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        req.headers.get("x-real-ip") ||
+        "unknown";
     }
   } catch (e) {
     // Ignore if not available

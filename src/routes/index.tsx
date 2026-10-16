@@ -55,13 +55,21 @@ const problems = [
 ];
 
 const steps = [
-  { icon: QrCode, title: "Scan the table QR", body: "No app, no signup wall. The table is already known." },
+  {
+    icon: QrCode,
+    title: "Scan the table QR",
+    body: "No app, no signup wall. The table is already known.",
+  },
   {
     icon: Sparkles,
     title: "A menu that knows you",
     body: "Past orders, tastes and allergens shape what you see first.",
   },
-  { icon: Mic, title: "Order by tap or voice", body: "Say it in plain language — the cart builds itself." },
+  {
+    icon: Mic,
+    title: "Order by tap or voice",
+    body: "Say it in plain language — the cart builds itself.",
+  },
   {
     icon: MessageSquareHeart,
     title: "Pay, rate, earn credits",
@@ -75,7 +83,11 @@ const features = [
     title: "Personalized recommendations",
     body: "Every guest sees the dishes they're most likely to love, first.",
   },
-  { icon: Mic, title: "Voice ordering", body: "Natural-language orders, including modifiers and splits." },
+  {
+    icon: Mic,
+    title: "Voice ordering",
+    body: "Natural-language orders, including modifiers and splits.",
+  },
   {
     icon: ShieldCheck,
     title: "Allergy-safe by design",
@@ -86,7 +98,11 @@ const features = [
     title: "Automatic discounts",
     body: "Coupons and credits apply themselves at the right moment.",
   },
-  { icon: Users, title: "Group ordering", body: "One table, many phones, a single synced cart and bill." },
+  {
+    icon: Users,
+    title: "Group ordering",
+    body: "One table, many phones, a single synced cart and bill.",
+  },
   {
     icon: MessageSquareHeart,
     title: "Feedback-for-credits loop",
@@ -127,7 +143,9 @@ function Index() {
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary">
               <QrCode className="size-4 text-primary-foreground" />
             </span>
-            <span className="truncate font-display text-lg font-semibold tracking-tight">TableMind</span>
+            <span className="truncate font-display text-lg font-semibold tracking-tight">
+              TableMind
+            </span>
           </a>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             <a href="#how" className="transition-colors hover:text-foreground">
@@ -182,8 +200,8 @@ function Index() {
               Your menu, but it actually knows the customer.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              TableMind replaces the static QR PDF with a menu that remembers tastes, hides allergens, takes
-              voice orders and applies the right discount on its own.
+              TableMind replaces the static QR PDF with a menu that remembers tastes, hides
+              allergens, takes voice orders and applies the right discount on its own.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
               <Link
@@ -234,7 +252,9 @@ function Index() {
       <section id="how" className="border-y border-border bg-muted/50">
         <div className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
           <Reveal className="max-w-2xl">
-            <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">For diners</p>
+            <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
+              For diners
+            </p>
             <h2 className="mt-3 font-display text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
               Four steps, start to plate.
             </h2>
@@ -283,7 +303,10 @@ function Index() {
       </section>
 
       {/* FOR RESTAURANTS */}
-      <section id="restaurants" className="border-y border-border bg-secondary text-secondary-foreground">
+      <section
+        id="restaurants"
+        className="border-y border-border bg-secondary text-secondary-foreground"
+      >
         <div className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
           <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <Reveal>
@@ -333,14 +356,19 @@ function Index() {
                     ["Lamb flatbread", "78%", "w-[78%]"],
                     ["Saffron risotto", "54%", "w-[54%]"],
                   ].map(([name, pct, w]) => (
-                    <div key={name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                    <div
+                      key={name}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"
+                    >
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium text-foreground">{name}</p>
                         <div className="mt-1.5 h-1.5 rounded-full bg-muted">
                           <div className={`h-1.5 rounded-full bg-primary ${w}`} />
                         </div>
                       </div>
-                      <span className="shrink-0 text-xs font-semibold text-muted-foreground">{pct}</span>
+                      <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                        {pct}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -356,7 +384,9 @@ function Index() {
                     <p.icon className="size-5 text-primary" />
                   </span>
                   <h3 className="mt-4 font-display text-lg font-semibold">{p.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-secondary-foreground/70">{p.body}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-secondary-foreground/70">
+                    {p.body}
+                  </p>
                 </div>
               </Reveal>
             ))}
@@ -383,8 +413,8 @@ function Index() {
         <Reveal delay={120} className="mx-auto mt-14 max-w-3xl">
           <blockquote className="rounded-3xl border border-border bg-card p-8 text-center shadow-soft sm:p-12">
             <p className="font-display text-2xl leading-snug font-semibold text-balance sm:text-3xl">
-              “We stopped guessing. Within a month we knew which six dishes were carrying the menu — and our
-              Friday covers went up without adding a single seat.”
+              “We stopped guessing. Within a month we knew which six dishes were carrying the menu —
+              and our Friday covers went up without adding a single seat.”
             </p>
             <footer className="mt-6 flex items-center justify-center gap-3">
               <span className="size-10 rounded-full bg-muted" aria-hidden />

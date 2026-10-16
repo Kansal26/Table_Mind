@@ -5,7 +5,7 @@ import { getOwnerRestaurantFn } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth/callback")({
   validateSearch: (search: Record<string, unknown>) => ({
-    redirect: search['redirect'] ? String(search['redirect']) : undefined,
+    redirect: search["redirect"] ? String(search["redirect"]) : undefined,
   }),
   component: CallbackPage,
 });
@@ -15,14 +15,19 @@ function CallbackPage() {
   const search = Route.useSearch();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        const safeRedirect = search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+        const safeRedirect =
+          search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
         if (safeRedirect) {
           navigate({ to: safeRedirect as any, replace: true });
         } else {
           try {
-            const restaurant = await getOwnerRestaurantFn({ data: { token: session.access_token } });
+            const restaurant = await getOwnerRestaurantFn({
+              data: { token: session.access_token },
+            });
             if (restaurant) {
               if (restaurant.deactivated_at) {
                 navigate({ to: "/auth/reactivate" as any, replace: true });

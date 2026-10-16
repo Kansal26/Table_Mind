@@ -19,7 +19,11 @@ export type Coupon = {
 };
 
 // Returns eligible coupons and their potential discount amount
-export async function evaluateCoupons(orderId: string, lines: any[], subtotal: number): Promise<Array<Coupon & { calculated_discount: number }>> {
+export async function evaluateCoupons(
+  orderId: string,
+  lines: any[],
+  subtotal: number,
+): Promise<Array<Coupon & { calculated_discount: number }>> {
   // Load order
   const { data: order } = await supabaseAdmin
     .from("orders")
@@ -90,7 +94,7 @@ export async function evaluateCoupons(orderId: string, lines: any[], subtotal: n
         if (targetItem) {
           isEligible = true;
           // Discount applies only to this specific item's total cost
-          discountAmount = (targetItem.menu_item.price * targetItem.qty) * (rule.discount_pct / 100);
+          discountAmount = targetItem.menu_item.price * targetItem.qty * (rule.discount_pct / 100);
         }
         break;
 

@@ -65,7 +65,7 @@ This writes `reports/analytics-validation.json`. The report includes:
 - assumptions and limitations alongside the machine-readable results
 - expected-baseline findings are marked in the highlighted findings so known-invalid fixture cases remain visible without being mistaken for unexpected failures
 
-Category counts represent findings and distinct affected records *within that category*. A record can have findings in multiple categories, so category counts are not additive. Known-invalid fixture rows are included and explicitly identified as expected baseline findings.
+Category counts represent findings and distinct affected records _within that category_. A record can have findings in multiple categories, so category counts are not additive. Known-invalid fixture rows are included and explicitly identified as expected baseline findings.
 
 ## Run commands
 

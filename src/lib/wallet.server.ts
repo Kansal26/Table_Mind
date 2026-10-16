@@ -23,28 +23,35 @@ export async function getWalletBalance(userId: string, restaurantId: string): Pr
   if (redeemedError) throw redeemedError;
 
   const earned = (earnedData || []).reduce((sum: number, row: any) => sum + (row.points || 0), 0);
-  const redeemed = (redeemedData || []).reduce((sum: number, row: any) => sum + Math.abs(row.points || 0), 0);
+  const redeemed = (redeemedData || []).reduce(
+    (sum: number, row: any) => sum + Math.abs(row.points || 0),
+    0,
+  );
 
   return Math.max(0, earned - redeemed);
 }
 
-export async function deductWallet(userId: string, pointsToRedeem: number, reason: string, orderId: string, restaurantId: string) {
+export async function deductWallet(
+  userId: string,
+  pointsToRedeem: number,
+  reason: string,
+  orderId: string,
+  restaurantId: string,
+) {
   if (pointsToRedeem <= 0) return;
-  
+
   const current = await getWalletBalance(userId, restaurantId);
   if (current < pointsToRedeem) throw new Error("Insufficient points balance");
 
   // Insert transaction
-  const { error: txError } = await (supabaseAdmin as any)
-    .from("wallet_transactions")
-    .insert({
-      user_id: userId,
-      restaurant_id: restaurantId,
-      amount: 0,
-      points: -pointsToRedeem,
-      reason,
-      order_id: orderId,
-    });
+  const { error: txError } = await (supabaseAdmin as any).from("wallet_transactions").insert({
+    user_id: userId,
+    restaurant_id: restaurantId,
+    amount: 0,
+    points: -pointsToRedeem,
+    reason,
+    order_id: orderId,
+  });
   if (txError) throw txError;
 }
 
@@ -53,7 +60,7 @@ export async function processFeedbackSubmission(
   userId: string,
   rating: number,
   comment?: string,
-  structuredAnswers?: any
+  structuredAnswers?: any,
 ) {
   // Get the order to find the restaurant_id
   const { data: order, error: orderError } = await (supabaseAdmin as any)
@@ -94,7 +101,7 @@ export async function processFeedbackSubmission(
     rating,
     comment,
     structured_answers: structuredAnswers,
-    credit_awarded: creditEarned // Repurposing this column to store points awarded
+    credit_awarded: creditEarned, // Repurposing this column to store points awarded
   });
 
   if (feedbackError) {
@@ -120,16 +127,16 @@ export async function processFeedbackSubmission(
       points: creditEarned,
       reason: "Feedback reward",
       order_id: orderId,
-      expires_at: expiresAt
+      expires_at: expiresAt,
     });
   }
 
   // For the frontend to show value
   const pointsPerRupee = settings?.points_per_rupee || 0;
-  
-  return { 
+
+  return {
     creditEarned,
     pointsValue: creditEarned * pointsPerRupee,
-    isLoyaltyEnabled
+    isLoyaltyEnabled,
   };
 }

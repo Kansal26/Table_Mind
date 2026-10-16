@@ -7,14 +7,17 @@ import { getOwnerRestaurantFn } from "@/lib/admin.functions";
 export const Route = createFileRoute("/admin")({
   ssr: false,
   beforeLoad: async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     const user = session?.user;
     if (error || !user || !session) {
       throw redirect({ to: "/auth/login", search: { redirect: "/admin/dashboard" } as any });
     }
 
     const restaurant = await getOwnerRestaurantFn({ data: { token: session.access_token } });
-    
+
     if (!restaurant) {
       throw redirect({ to: "/register-restaurant" });
     }
@@ -44,7 +47,7 @@ function AdminLayout() {
 
   const queryClient = useQueryClient();
   const token = Route.useRouteContext().session.access_token;
-  
+
   const waiterCallsQuery = useQuery({
     queryKey: ["admin-waiter-calls", restaurant.id],
     queryFn: async () => {
@@ -56,9 +59,18 @@ function AdminLayout() {
   useEffect(() => {
     const channel = supabase
       .channel("waiter-calls-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "waiter_calls", filter: `restaurant_id=eq.${restaurant.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "waiter_calls",
+          filter: `restaurant_id=eq.${restaurant.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -74,13 +86,13 @@ function AdminLayout() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="font-bold text-xl">{restaurant.name} Admin</div>
           <nav className="flex items-center gap-6">
-            {navItems.map(item => (
-              <Link 
-                key={item.path} 
-                to={item.path} 
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
                 className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                  location.pathname.startsWith(item.path) 
-                    ? "text-primary" 
+                  location.pathname.startsWith(item.path)
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >

@@ -20,7 +20,7 @@ export type VoiceOrderResponse = z.infer<typeof voiceOrderSchema>;
 
 export async function parseVoiceTranscript(
   qrToken: string,
-  transcript: string
+  transcript: string,
 ): Promise<VoiceOrderResponse> {
   const scope = await requireSessionScope(qrToken);
   if (!scope) throw new Error("Invalid session");
@@ -32,7 +32,7 @@ export async function parseVoiceTranscript(
     .eq("available", true);
 
   if (!menuItems || menuItems.length === 0) {
-    console.error('Error: No menu items found for restaurant');
+    console.error("Error: No menu items found for restaurant");
   }
 
   if (error || !menuItems) {
@@ -73,7 +73,7 @@ RULES:
 5. UNMATCHED: If no items match, return empty \`parsed_items: []\` and \`clarification_needed: null\`.
 6. INCOMPLETE FRAGMENTS: If the transcript appears to be cut off mid-sentence (e.g., ends with 'also I would love to add...' or similar incomplete phrasing), do NOT guess what the incomplete item might be, even if it fuzzy-matches a menu item. Instead, only return the items that were CLEARLY and COMPLETELY stated, and set clarification_needed to something like: 'It looks like you were about to add something else — what would you like?'`;
 
-  const apiKey = process.env['GROQ_API_KEY'];
+  const apiKey = process.env["GROQ_API_KEY"];
   if (!apiKey) throw new Error("GROQ_API_KEY is missing");
 
   const groq = new Groq({ apiKey });
@@ -81,10 +81,10 @@ RULES:
   const responsePromise = groq.chat.completions.create({
     messages: [
       { role: "system", content: prompt.replace(`The user said: "${transcript}"`, "") },
-      { role: "user", content: `The user said: "${transcript}"` }
+      { role: "user", content: `The user said: "${transcript}"` },
     ],
     model: "qwen/qwen3.6-27b",
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
   });
 
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -99,15 +99,17 @@ RULES:
     }
 
     const rawData = JSON.parse(text);
-    
+
     // Fallback if LLM returns just the array
-    let items = Array.isArray(rawData) ? rawData : (rawData.parsed_items || []);
-    
+    let items = Array.isArray(rawData) ? rawData : rawData.parsed_items || [];
+
     // Sanitize quantities and confidences to numbers
     items = items.map((item: any) => ({
       ...item,
-      quantity: typeof item.quantity === 'string' ? parseInt(item.quantity, 10) || 1 : item.quantity,
-      confidence: typeof item.confidence === 'string' ? parseFloat(item.confidence) || 1 : item.confidence
+      quantity:
+        typeof item.quantity === "string" ? parseInt(item.quantity, 10) || 1 : item.quantity,
+      confidence:
+        typeof item.confidence === "string" ? parseFloat(item.confidence) || 1 : item.confidence,
     }));
 
     return {
@@ -115,7 +117,7 @@ RULES:
       clarification_needed: rawData.clarification_needed || null,
     } as VoiceOrderResponse;
   } catch (err: any) {
-    console.error('LLM Call Failed or Timed Out:', err);
+    console.error("LLM Call Failed or Timed Out:", err);
     throw err;
   }
 }

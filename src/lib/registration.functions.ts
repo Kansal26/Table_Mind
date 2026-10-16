@@ -6,17 +6,19 @@ import { rateLimit } from "./rate-limit.server";
 import { sendRestaurantWelcomeEmail } from "./email.server";
 
 export const registerRestaurantFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({
-      token: z.string(),
-      name: z.string().min(1),
-      tagline: z.string().optional(),
-      cuisine_type: z.string().optional(),
-      city: z.string().min(1),
-      address: z.string().min(1),
-      logo_url: z.string().optional(),
-      numTables: z.number().min(1).max(50)
-    }).parse(data)
+  .validator((data: unknown) =>
+    z
+      .object({
+        token: z.string(),
+        name: z.string().min(1),
+        tagline: z.string().optional(),
+        cuisine_type: z.string().optional(),
+        city: z.string().min(1),
+        address: z.string().min(1),
+        logo_url: z.string().optional(),
+        numTables: z.number().min(1).max(50),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
@@ -30,7 +32,7 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
       .select("id, owner_id")
       .eq("owner_id", user.id)
       .maybeSingle();
-      
+
     if (existing) {
       throw new Error("User already owns a restaurant");
     }
@@ -46,7 +48,7 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
         address: data.address,
         logo_url: data.logo_url ?? null,
         owner_id: user.id,
-        is_active: true
+        is_active: true,
       })
       .select("id")
       .single();
@@ -60,36 +62,36 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
       // Use a short random string appended to make it globally unique yet short
       const randomSlug = Math.random().toString(36).substring(2, 8);
       const qrToken = `${shortRestId}-t${i}-${randomSlug}`;
-      
+
       tablesToInsert.push({
         restaurant_id: restaurant.id,
         label: `Table ${i}`,
         qr_token: qrToken,
         seat_count: 4,
-        is_active: true
+        is_active: true,
       });
     }
 
-    const { error: tError } = await sb
-      .from("tables")
-      .insert(tablesToInsert);
+    const { error: tError } = await sb.from("tables").insert(tablesToInsert);
 
     if (tError) throw tError;
 
     // 4. Send welcome email
     try {
-      const { data: { user: authUser } } = await sb.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await sb.auth.getUser();
       if (authUser && authUser.email) {
-        const ownerName = authUser.user_metadata?.['full_name'] || data.name;
+        const ownerName = authUser.user_metadata?.["full_name"] || data.name;
 
         await sendRestaurantWelcomeEmail({
           ownerEmail: authUser.email,
           restaurantName: data.name,
-          ownerName: ownerName
+          ownerName: ownerName,
         });
       }
     } catch (emailError) {
-      console.error('[WELCOME EMAIL] FAILED:', emailError);
+      console.error("[WELCOME EMAIL] FAILED:", emailError);
     }
 
     return { ok: true, restaurantId: restaurant.id };

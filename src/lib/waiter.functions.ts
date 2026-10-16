@@ -18,11 +18,13 @@ async function requireRestaurantOwnership(token: string, restaurantId: string) {
 }
 
 export const callWaiterFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({ 
-      qrToken: z.string(), 
-      reason: z.string() 
-    }).parse(data)
+  .validator((data: unknown) =>
+    z
+      .object({
+        qrToken: z.string(),
+        reason: z.string(),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const tableId = await resolveTableId(data.qrToken);
@@ -62,23 +64,23 @@ export const callWaiterFn = createServerFn({ method: "POST" })
         session_id: sessionId,
         table_id: tableId,
         restaurant_id: restaurantId,
-        reason: data.reason
+        reason: data.reason,
       })
       .select("id")
       .single();
 
     if (error) throw error;
-    
+
     return { success: true, callId: call.id };
   });
 
 export const fetchAdminWaiterCallsFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data)
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data }) => {
     await requireRestaurantOwnership(data.token, data.restaurantId);
-    
+
     const { data: calls, error } = await supabaseAdmin
       .from("waiter_calls" as any)
       .select("id, status, reason, created_at, tables(label)")
@@ -87,46 +89,50 @@ export const fetchAdminWaiterCallsFn = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    
+
     return (calls || []).map((c: any) => ({
       id: c.id,
       status: c.status,
       reason: c.reason,
       created_at: c.created_at,
-      table_label: c.tables?.label
+      table_label: c.tables?.label,
     }));
   });
 
 export const acknowledgeWaiterCallFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({ token: z.string(), restaurantId: z.string().uuid(), callId: z.string().uuid() }).parse(data)
+  .validator((data: unknown) =>
+    z
+      .object({ token: z.string(), restaurantId: z.string().uuid(), callId: z.string().uuid() })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     await requireRestaurantOwnership(data.token, data.restaurantId);
-    
+
     const { error } = await supabaseAdmin
       .from("waiter_calls" as any)
       .update({ status: "acknowledged", acknowledged_at: new Date().toISOString() })
       .eq("id", data.callId)
       .eq("restaurant_id", data.restaurantId);
-      
+
     if (error) throw error;
     return { success: true };
   });
 
 export const resolveWaiterCallFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({ token: z.string(), restaurantId: z.string().uuid(), callId: z.string().uuid() }).parse(data)
+  .validator((data: unknown) =>
+    z
+      .object({ token: z.string(), restaurantId: z.string().uuid(), callId: z.string().uuid() })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     await requireRestaurantOwnership(data.token, data.restaurantId);
-    
+
     const { error } = await supabaseAdmin
       .from("waiter_calls" as any)
       .update({ status: "resolved", resolved_at: new Date().toISOString() })
       .eq("id", data.callId)
       .eq("restaurant_id", data.restaurantId);
-      
+
     if (error) throw error;
     return { success: true };
   });

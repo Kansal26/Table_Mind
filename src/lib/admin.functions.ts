@@ -15,16 +15,23 @@ export const getOwnerRestaurantFn = createServerFn({ method: "POST" })
       .select("*")
       .eq("owner_id", user.id)
       .maybeSingle();
-      
+
     if (error) throw error;
     return restaurant || null;
   });
 
 export const getLoyaltySettingsFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
-    const { data: owns } = await supabaseAdmin.from("restaurants").select("id").eq("id", data.restaurantId).eq("owner_id", user.id).single();
+    const { data: owns } = await supabaseAdmin
+      .from("restaurants")
+      .select("id")
+      .eq("id", data.restaurantId)
+      .eq("owner_id", user.id)
+      .single();
     if (!owns) throw new Error("Unauthorized");
 
     const { data: settings } = await supabaseAdmin
@@ -32,7 +39,7 @@ export const getLoyaltySettingsFn = createServerFn({ method: "POST" })
       .select("*")
       .eq("restaurant_id", data.restaurantId)
       .maybeSingle();
-      
+
     return settings || null;
   });
 
@@ -46,39 +53,56 @@ const updateLoyaltySchema = z.object({
   points_per_rupee: z.number().min(0),
   min_order_value_to_redeem: z.number().min(0),
   max_points_redeemable_per_order: z.number().int().min(0),
-  points_expiry_days: z.number().int().nullable()
+  points_expiry_days: z.number().int().nullable(),
 });
 
 export const updateLoyaltySettingsFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => updateLoyaltySchema.parse(data))
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
-    const { data: owns } = await supabaseAdmin.from("restaurants").select("id").eq("id", data.restaurantId).eq("owner_id", user.id).single();
+    const { data: owns } = await supabaseAdmin
+      .from("restaurants")
+      .select("id")
+      .eq("id", data.restaurantId)
+      .eq("owner_id", user.id)
+      .single();
     if (!owns) throw new Error("Unauthorized");
 
     const { token, restaurantId, ...updates } = data;
 
-    const { error } = await supabaseAdmin
-      .from("loyalty_settings")
-      .upsert({
+    const { error } = await supabaseAdmin.from("loyalty_settings").upsert(
+      {
         restaurant_id: restaurantId,
-        ...updates
-      }, { onConflict: "restaurant_id" });
+        ...updates,
+      },
+      { onConflict: "restaurant_id" },
+    );
 
     if (error) throw error;
     return { success: true };
   });
 
 export const forceCloseSessionFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), sessionId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), sessionId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
     rateLimit(user.id, "forceCloseSession", 50, 15 * 60 * 1000);
     // Since sessions table has no owner_id, we need admin client, but we must verify ownership manually:
-    const { data: session } = await supabaseAdmin.from("sessions").select("tables(restaurant_id)").eq("id", data.sessionId).single();
+    const { data: session } = await supabaseAdmin
+      .from("sessions")
+      .select("tables(restaurant_id)")
+      .eq("id", data.sessionId)
+      .single();
     if (session) {
       const restId = (session.tables as any)?.restaurant_id;
-      const { data: owns } = await supabaseAdmin.from("restaurants").select("id").eq("id", restId).eq("owner_id", user.id).single();
+      const { data: owns } = await supabaseAdmin
+        .from("restaurants")
+        .select("id")
+        .eq("id", restId)
+        .eq("owner_id", user.id)
+        .single();
       if (!owns) throw new Error("Unauthorized");
     }
 
@@ -93,7 +117,9 @@ export const forceCloseSessionFn = createServerFn({ method: "POST" })
 export async function getKitchenLoad(restaurantId: string) {
   const { data: activeOrders } = await supabaseAdmin
     .from("orders")
-    .select("id, kitchen_status, order_items(menu_items(prep_time_min)), sessions!inner(tables!inner(restaurant_id))")
+    .select(
+      "id, kitchen_status, order_items(menu_items(prep_time_min)), sessions!inner(tables!inner(restaurant_id))",
+    )
     .in("kitchen_status", ["received", "preparing"])
     .eq("status", "paid")
     .eq("sessions.tables.restaurant_id", restaurantId);
@@ -118,12 +144,14 @@ export async function getKitchenLoad(restaurantId: string) {
   let level: "low" | "medium" | "high" = "low";
   if (orderCount >= 8) level = "high";
   else if (orderCount >= 4) level = "medium";
-  
+
   return { score, level, count: orderCount };
 }
 
 export const getKitchenLoadFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
     // RLS check manual for load fn
@@ -131,10 +159,12 @@ export const getKitchenLoadFn = createServerFn({ method: "POST" })
   });
 
 export const fetchLiveOrdersFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
-    
+
     // Auth client will respect RLS (though orders table might be public select for now, we verify ownership)
     const sb = getSupabaseAuthClient(data.token);
 
@@ -143,30 +173,36 @@ export const fetchLiveOrdersFn = createServerFn({ method: "POST" })
 
     const { data: orders } = await sb
       .from("orders")
-      .select(`
+      .select(
+        `
         id, created_at, kitchen_status,
         sessions!inner(tables!inner(label, restaurant_id)),
         order_items(
           id, qty, allergy_override_ack,
           menu_items(name)
         )
-      `)
+      `,
+      )
       .eq("status", "paid")
       .eq("sessions.tables.restaurant_id", data.restaurantId)
       // Fetch anything not served, PLUS anything served today
-      .or(`kitchen_status.neq.served,and(kitchen_status.eq.served,created_at.gte.${today.toISOString()})`)
+      .or(
+        `kitchen_status.neq.served,and(kitchen_status.eq.served,created_at.gte.${today.toISOString()})`,
+      )
       .order("created_at", { ascending: true });
 
     return orders || [];
   });
 
 export const updateKitchenStatusFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => 
-    z.object({
-      token: z.string(),
-      orderId: z.string().uuid(),
-      status: z.enum(["received", "preparing", "ready", "served"])
-    }).parse(data)
+  .validator((data: unknown) =>
+    z
+      .object({
+        token: z.string(),
+        orderId: z.string().uuid(),
+        status: z.enum(["received", "preparing", "ready", "served"]),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
@@ -181,23 +217,25 @@ export const updateKitchenStatusFn = createServerFn({ method: "POST" })
   });
 
 export const fetchAnalyticsFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const { requireRestaurantOwnership } = await import("./auth.server");
     const user = await requireRestaurantOwnership(data.token, data.restaurantId);
 
-    // 1. Recommendations - note: recommendation_logs doesn't have restaurant_id currently, 
+    // 1. Recommendations - note: recommendation_logs doesn't have restaurant_id currently,
     // but it links to session_id which links to table_id which links to restaurant_id
     const { data: recLogs } = await supabaseAdmin
       .from("recommendation_logs")
       .select("source, added_to_cart, sessions!inner(tables!inner(restaurant_id))")
       .eq("sessions.tables.restaurant_id", data.restaurantId);
-      
+
     const recommendations = {
       llm: { shown: 0, added: 0 },
-      rule: { shown: 0, added: 0 }
+      rule: { shown: 0, added: 0 },
     };
-    
+
     if (recLogs) {
       for (const log of recLogs) {
         const src = log.source === "llm" ? "llm" : "rule";
@@ -212,19 +250,19 @@ export const fetchAnalyticsFn = createServerFn({ method: "POST" })
       .select("rating, order_id, orders!inner(sessions!inner(tables!inner(restaurant_id)))")
       .eq("orders.sessions.tables.restaurant_id", data.restaurantId)
       .not("rating", "is", null);
-      
-    const itemRatings: Record<string, { name: string, sum: number, count: number }> = {};
-    
+
+    const itemRatings: Record<string, { name: string; sum: number; count: number }> = {};
+
     if (feedbackData && feedbackData.length > 0) {
-      const orderIds = feedbackData.map(f => f.order_id);
+      const orderIds = feedbackData.map((f) => f.order_id);
       const { data: fbOrderItems } = await supabaseAdmin
         .from("order_items")
         .select("order_id, menu_items(id, name)")
         .in("order_id", orderIds);
-        
+
       if (fbOrderItems) {
         for (const oi of fbOrderItems) {
-          const fb = feedbackData.find(f => f.order_id === oi.order_id);
+          const fb = feedbackData.find((f) => f.order_id === oi.order_id);
           const menuItem = oi.menu_items as any;
           if (fb && menuItem && menuItem.id) {
             if (!itemRatings[menuItem.id]) {
@@ -236,52 +274,73 @@ export const fetchAnalyticsFn = createServerFn({ method: "POST" })
         }
       }
     }
-    
-    const feedbackList = Object.values(itemRatings).map(r => ({
-      name: r.name,
-      avg: Number((r.sum / r.count).toFixed(1)),
-      count: r.count
-    })).sort((a, b) => b.count - a.count);
+
+    const feedbackList = Object.values(itemRatings)
+      .map((r) => ({
+        name: r.name,
+        avg: Number((r.sum / r.count).toFixed(1)),
+        count: r.count,
+      }))
+      .sort((a, b) => b.count - a.count);
 
     // 3. Coupons
     const { data: discounts } = await supabaseAdmin
       .from("order_discounts")
       .select("discount_amount, coupons!inner(code, name, restaurant_id)")
       .eq("coupons.restaurant_id", data.restaurantId);
-      
-    const couponStats: Record<string, { name: string, code: string, redeemed: number, total_discount: number }> = {};
-    
+
+    const couponStats: Record<
+      string,
+      { name: string; code: string; redeemed: number; total_discount: number }
+    > = {};
+
     if (discounts) {
       for (const d of discounts) {
         const c = d.coupons as any;
         if (c) {
           if (!couponStats[c.code]) {
-            couponStats[c.code] = { name: c.name || c.code, code: c.code, redeemed: 0, total_discount: 0 };
+            couponStats[c.code] = {
+              name: c.name || c.code,
+              code: c.code,
+              redeemed: 0,
+              total_discount: 0,
+            };
           }
           couponStats[c.code]!.redeemed++;
           couponStats[c.code]!.total_discount += Number(d.discount_amount) || 0;
         }
       }
     }
-    
+
     const couponList = Object.values(couponStats).sort((a, b) => b.redeemed - a.redeemed);
 
     return { recommendations, feedbackList, couponList };
   });
 
 export const exportOrdersFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid(), fromDate: z.string().optional(), toDate: z.string().optional() }).parse(data))
+  .validator((data: unknown) =>
+    z
+      .object({
+        token: z.string(),
+        restaurantId: z.string().uuid(),
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data }) => {
     const { requireRestaurantOwnership } = await import("./auth.server");
     await requireRestaurantOwnership(data.token, data.restaurantId);
 
     let query = supabaseAdmin
       .from("orders")
-      .select(`
+      .select(
+        `
         id, created_at, status, subtotal, discount_amount, credits_applied, tax, total, guest_email,
         sessions!inner(tables!inner(label, restaurant_id)),
         order_items(qty, menu_items(name))
-      `)
+      `,
+      )
       .eq("sessions.tables.restaurant_id", data.restaurantId)
       .eq("status", "paid")
       .order("created_at", { ascending: false });
@@ -293,7 +352,9 @@ export const exportOrdersFn = createServerFn({ method: "POST" })
     if (!orders) return [];
 
     return orders.map((o: any) => {
-      const itemsStr = (o.order_items || []).map((oi: any) => `${oi.qty}x ${oi.menu_items?.name}`).join("; ");
+      const itemsStr = (o.order_items || [])
+        .map((oi: any) => `${oi.qty}x ${oi.menu_items?.name}`)
+        .join("; ");
       const tableLabel = o.sessions?.tables?.label || "Unknown";
       return {
         orderId: o.id,
@@ -306,20 +367,31 @@ export const exportOrdersFn = createServerFn({ method: "POST" })
         tax: o.tax,
         total: o.total,
         paymentStatus: o.status,
-        guestEmail: o.guest_email || ""
+        guestEmail: o.guest_email || "",
       };
     });
   });
 
 export const exportRevenueSummaryFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid(), fromDate: z.string().optional(), toDate: z.string().optional() }).parse(data))
+  .validator((data: unknown) =>
+    z
+      .object({
+        token: z.string(),
+        restaurantId: z.string().uuid(),
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data }) => {
     const { requireRestaurantOwnership } = await import("./auth.server");
     await requireRestaurantOwnership(data.token, data.restaurantId);
 
     let query = supabaseAdmin
       .from("orders")
-      .select(`created_at, subtotal, discount_amount, total, sessions!inner(tables!inner(restaurant_id))`)
+      .select(
+        `created_at, subtotal, discount_amount, total, sessions!inner(tables!inner(restaurant_id))`,
+      )
       .eq("sessions.tables.restaurant_id", data.restaurantId)
       .eq("status", "paid");
 
@@ -332,7 +404,7 @@ export const exportRevenueSummaryFn = createServerFn({ method: "POST" })
     const dailyStats: Record<string, any> = {};
     for (const o of orders) {
       if (!o.created_at) continue;
-      const dateStr = new Date(o.created_at).toISOString().split('T')[0];
+      const dateStr = new Date(o.created_at).toISOString().split("T")[0];
       if (!dateStr) continue;
       if (!dailyStats[dateStr]) {
         dailyStats[dateStr] = { date: dateStr, orders: 0, gross: 0, discounts: 0, net: 0 };
@@ -347,7 +419,9 @@ export const exportRevenueSummaryFn = createServerFn({ method: "POST" })
   });
 
 export const exportDishFeedbackFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const { requireRestaurantOwnership } = await import("./auth.server");
     await requireRestaurantOwnership(data.token, data.restaurantId);
@@ -373,7 +447,13 @@ export const exportDishFeedbackFn = createServerFn({ method: "POST" })
           const menuItem = oi.menu_items as any;
           if (fb && menuItem && menuItem.id) {
             if (!dishStats[menuItem.id]) {
-              dishStats[menuItem.id] = { name: menuItem.name, category: menuItem.category, sumRating: 0, reviews: 0, totalOrders: 0 };
+              dishStats[menuItem.id] = {
+                name: menuItem.name,
+                category: menuItem.category,
+                sumRating: 0,
+                reviews: 0,
+                totalOrders: 0,
+              };
             }
             dishStats[menuItem.id].sumRating += fb.rating;
             dishStats[menuItem.id].reviews += 1;
@@ -383,17 +463,21 @@ export const exportDishFeedbackFn = createServerFn({ method: "POST" })
       }
     }
 
-    return Object.values(dishStats).map((d: any) => ({
-      name: d.name,
-      category: d.category || "Unknown",
-      avgRating: Number((d.sumRating / d.reviews).toFixed(2)),
-      reviews: d.reviews,
-      totalOrders: d.totalOrders
-    })).sort((a, b) => b.reviews - a.reviews);
+    return Object.values(dishStats)
+      .map((d: any) => ({
+        name: d.name,
+        category: d.category || "Unknown",
+        avgRating: Number((d.sumRating / d.reviews).toFixed(2)),
+        reviews: d.reviews,
+        totalOrders: d.totalOrders,
+      }))
+      .sort((a, b) => b.reviews - a.reviews);
   });
 
 export const exportCouponsFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const { requireRestaurantOwnership } = await import("./auth.server");
     await requireRestaurantOwnership(data.token, data.restaurantId);
@@ -418,11 +502,13 @@ export const exportCouponsFn = createServerFn({ method: "POST" })
       }
     }
 
-    return Object.values(couponStats).map((c: any) => ({
-      name: c.name,
-      type: c.type,
-      redeemed: c.redeemed,
-      totalDiscount: c.totalDiscount,
-      avgDiscount: Number((c.totalDiscount / c.redeemed).toFixed(2))
-    })).sort((a, b) => b.redeemed - a.redeemed);
+    return Object.values(couponStats)
+      .map((c: any) => ({
+        name: c.name,
+        type: c.type,
+        redeemed: c.redeemed,
+        totalDiscount: c.totalDiscount,
+        avgDiscount: Number((c.totalDiscount / c.redeemed).toFixed(2)),
+      }))
+      .sort((a, b) => b.redeemed - a.redeemed);
   });

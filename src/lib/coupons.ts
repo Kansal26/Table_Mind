@@ -1,8 +1,16 @@
-import { fetchEligibleCouponsFn, applyCouponFn, fetchAdminCouponsFn, toggleCouponFn, createCouponFn } from "./coupons.functions";
+import {
+  fetchEligibleCouponsFn,
+  applyCouponFn,
+  fetchAdminCouponsFn,
+  toggleCouponFn,
+  createCouponFn,
+} from "./coupons.functions";
 import type { Coupon, CouponRule } from "./coupons.server";
 
-export async function fetchEligibleCoupons(qrToken: string): Promise<{ coupons: Array<Coupon & { calculated_discount: number }>; applied: string | null }> {
-  return await fetchEligibleCouponsFn({ data: { qrToken } }) as any;
+export async function fetchEligibleCoupons(
+  qrToken: string,
+): Promise<{ coupons: Array<Coupon & { calculated_discount: number }>; applied: string | null }> {
+  return (await fetchEligibleCouponsFn({ data: { qrToken } })) as any;
 }
 
 export async function applyCoupon(qrToken: string, couponId: string | null) {
@@ -20,7 +28,10 @@ export async function toggleCoupon(token: string, couponId: string, active: bool
   return await toggleCouponFn({ data: { token, couponId, active } });
 }
 
-export async function createCoupon(token: string, data: { restaurantId: string; name: string; description: string; rule_json: any }) {
+export async function createCoupon(
+  token: string,
+  data: { restaurantId: string; name: string; description: string; rule_json: any },
+) {
   const { createCouponFn } = await import("./coupons.functions");
   await createCouponFn({ data: { ...data, token } });
 }

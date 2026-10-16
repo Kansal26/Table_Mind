@@ -64,7 +64,9 @@ function SettingsPage() {
         const success = await requestOtp("change_password");
         if (success) setPwdOtpRequested(true);
       } else {
-        const verifyRes = await verifyOtpFn({ data: { token, purpose: "change_password", code: pwdOtp } });
+        const verifyRes = await verifyOtpFn({
+          data: { token, purpose: "change_password", code: pwdOtp },
+        });
         if (verifyRes.verified) {
           const { error } = await supabase.auth.updateUser({ password: newPassword });
           if (error) throw error;
@@ -93,7 +95,9 @@ function SettingsPage() {
         const success = await requestOtp("deactivate_account");
         if (success) setDeactOtpRequested(true);
       } else {
-        const verifyRes = await verifyOtpFn({ data: { token, purpose: "deactivate_account", code: deactOtp } });
+        const verifyRes = await verifyOtpFn({
+          data: { token, purpose: "deactivate_account", code: deactOtp },
+        });
         if (verifyRes.verified) {
           await deactivateAccountFn({ data: { token } });
           toast.success("Account deactivated");
@@ -123,7 +127,9 @@ function SettingsPage() {
         const success = await requestOtp("delete_account");
         if (success) setDelOtpRequested(true);
       } else {
-        const verifyRes = await verifyOtpFn({ data: { token, purpose: "delete_account", code: delOtp.trim() } });
+        const verifyRes = await verifyOtpFn({
+          data: { token, purpose: "delete_account", code: delOtp.trim() },
+        });
         if (verifyRes.verified) {
           await deleteAccountFn({ data: { token } });
           toast.success("Account permanently deleted.");
@@ -173,7 +179,7 @@ function SettingsPage() {
                 required
               />
             </div>
-            
+
             {pwdOtpRequested && (
               <div className="space-y-2 pt-4">
                 <Label>Verification Code (Sent to Email)</Label>
@@ -193,7 +199,12 @@ function SettingsPage() {
               {pwdOtpRequested ? "Confirm Change" : "Send Verification Code"}
             </Button>
             {pwdOtpRequested && (
-              <Button type="button" variant="ghost" onClick={() => setPwdOtpRequested(false)} className="ml-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPwdOtpRequested(false)}
+                className="ml-2"
+              >
                 Cancel
               </Button>
             )}
@@ -207,9 +218,9 @@ function SettingsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-warning">Deactivate Account</h2>
                 <p className="text-sm mt-1">
-                  Deactivating will hide your restaurant from customers — QR codes will show 
-                  "Temporarily unavailable" and you won't be able to access your dashboard 
-                  until you reactivate by signing in again.
+                  Deactivating will hide your restaurant from customers — QR codes will show
+                  "Temporarily unavailable" and you won't be able to access your dashboard until you
+                  reactivate by signing in again.
                 </p>
               </div>
               <form onSubmit={handleDeactivate} className="max-w-sm">
@@ -227,17 +238,31 @@ function SettingsPage() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button type="submit" variant="outline" className="border-warning text-warning" disabled={deactLoading}>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        className="border-warning text-warning"
+                        disabled={deactLoading}
+                      >
                         {deactLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Confirm Deactivation
                       </Button>
-                      <Button type="button" variant="ghost" onClick={() => setDeactOtpRequested(false)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setDeactOtpRequested(false)}
+                      >
                         Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <Button type="submit" variant="outline" className="border-warning text-warning" disabled={deactLoading}>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="border-warning text-warning"
+                    disabled={deactLoading}
+                  >
                     {deactLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Deactivate My Account
                   </Button>
@@ -252,16 +277,20 @@ function SettingsPage() {
             <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
             <div className="space-y-4 w-full">
               <div>
-                <h2 className="text-xl font-semibold text-destructive">Delete Account (Danger Zone)</h2>
+                <h2 className="text-xl font-semibold text-destructive">
+                  Delete Account (Danger Zone)
+                </h2>
                 <p className="text-sm font-bold text-destructive mt-1">
-                  This permanently deletes your account, restaurant, menu, all order history, 
-                  and all customer data. This CANNOT be undone.
+                  This permanently deletes your account, restaurant, menu, all order history, and
+                  all customer data. This CANNOT be undone.
                 </p>
               </div>
-              
+
               <form onSubmit={handleDelete} className="max-w-sm space-y-4">
                 <div className="space-y-2">
-                  <Label>Type <strong>{restaurant.name}</strong> to confirm</Label>
+                  <Label>
+                    Type <strong>{restaurant.name}</strong> to confirm
+                  </Label>
                   <Input
                     type="text"
                     value={delNameConfirm}
@@ -290,15 +319,19 @@ function SettingsPage() {
                         {delLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Permanently Delete
                       </Button>
-                      <Button type="button" variant="ghost" onClick={() => setDelOtpRequested(false)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setDelOtpRequested(false)}
+                      >
                         Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <Button 
-                    type="submit" 
-                    variant="destructive" 
+                  <Button
+                    type="submit"
+                    variant="destructive"
                     disabled={delLoading || delNameConfirm !== restaurant.name}
                   >
                     {delLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

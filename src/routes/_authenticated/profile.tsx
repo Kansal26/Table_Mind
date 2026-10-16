@@ -85,13 +85,13 @@ function ProfilePage() {
   useEffect(() => {
     const profile = profileQuery.data;
     if (!profile) return;
-    
+
     if (!profile.name && user?.user_metadata) {
-      setName(user.user_metadata['full_name'] || user.user_metadata['name'] || "");
+      setName(user.user_metadata["full_name"] || user.user_metadata["name"] || "");
     } else {
       setName(profile.name ?? "");
     }
-    
+
     setTags(profile.dietary_tags ?? []);
     setAllergens(profile.allergens ?? []);
   }, [profileQuery.data, user?.user_metadata]);
@@ -119,7 +119,11 @@ function ProfilePage() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    void navigate({ to: "/auth/login", search: { redirect: "", table: "", order: "" }, replace: true });
+    void navigate({
+      to: "/auth/login",
+      search: { redirect: "", table: "", order: "" },
+      replace: true,
+    });
   }
 
   if (profileQuery.isLoading) {
@@ -130,17 +134,23 @@ function ProfilePage() {
     );
   }
 
-  const userNameDisplay = user?.user_metadata?.['full_name'] || user?.user_metadata?.['name'] || user?.email || "?";
-  const initials = userNameDisplay.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
+  const userNameDisplay =
+    user?.user_metadata?.["full_name"] || user?.user_metadata?.["name"] || user?.email || "?";
+  const initials = userNameDisplay
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <main className="min-h-screen bg-background px-5 pb-16">
       <div className="mx-auto max-w-lg">
         <header className="flex items-start justify-between pt-8">
           <div className="flex items-center gap-4">
-            {user?.user_metadata?.['avatar_url'] || user?.user_metadata?.['picture'] ? (
+            {user?.user_metadata?.["avatar_url"] || user?.user_metadata?.["picture"] ? (
               <img
-                src={user.user_metadata['avatar_url'] || user.user_metadata['picture']}
+                src={user.user_metadata["avatar_url"] || user.user_metadata["picture"]}
                 alt="Profile"
                 className="size-12 rounded-full object-cover"
               />
@@ -151,9 +161,7 @@ function ProfilePage() {
             )}
             <div>
               <h1 className="font-display text-3xl text-foreground">Your profile</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {user?.email ?? "Signed in"}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{user?.email ?? "Signed in"}</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleSignOut}>
@@ -167,7 +175,9 @@ function ProfilePage() {
             <div className="space-y-3">
               {walletQuery.data.balances.map((item: any) => (
                 <div key={item.restaurantId} className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">{item.restaurantName}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {item.restaurantName}
+                  </span>
                   <span className="text-sm font-medium text-primary">{item.balance} pts</span>
                 </div>
               ))}
@@ -227,16 +237,16 @@ function ProfilePage() {
         </section>
 
         {saveMutation.isError && (
-          <p className="mt-6 text-sm text-destructive">
-            We couldn't save that. Please try again.
-          </p>
+          <p className="mt-6 text-sm text-destructive">We couldn't save that. Please try again.</p>
         )}
 
         {showGoToMenu ? (
           <Button
             className="mt-10 w-full gap-2"
             size="lg"
-            onClick={() => navigate({ to: "/table/$qrToken", params: { qrToken: "demo-table-12" } })}
+            onClick={() =>
+              navigate({ to: "/table/$qrToken", params: { qrToken: "demo-table-12" } })
+            }
           >
             Go to Menu <ArrowRight className="size-4" />
           </Button>

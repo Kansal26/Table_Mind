@@ -2,7 +2,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Mic, Loader2, StopCircle, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseVoiceOrderFn } from "@/lib/voice.functions";
 import type { VoiceOrderResponse } from "@/lib/voice.server";
@@ -44,7 +50,7 @@ export function VoiceOrder({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [parsedOrder, setParsedOrder] = useState<VoiceOrderResponse | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -94,8 +100,10 @@ export function VoiceOrder({
     };
 
     recognition.onerror = (event: any) => {
-      if (event.error === 'not-allowed') {
-        setErrorMsg("Voice ordering isn't available in this browser. Please tap items from the menu instead.");
+      if (event.error === "not-allowed") {
+        setErrorMsg(
+          "Voice ordering isn't available in this browser. Please tap items from the menu instead.",
+        );
       }
       setRecording(false);
     };
@@ -114,20 +122,23 @@ export function VoiceOrder({
     };
   }, []);
 
-  const stopRecording = useCallback((finalText: string) => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    if (recognitionRef.current) recognitionRef.current.stop();
-    setRecording(false);
-    
-    const text = finalText.trim();
-    if (!text) {
-      setErrorMsg("We didn't catch that. Try again.");
-      return;
-    }
-    
-    setIsProcessing(true);
-    parseMutation.mutate(text);
-  }, [parseMutation]);
+  const stopRecording = useCallback(
+    (finalText: string) => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setRecording(false);
+
+      const text = finalText.trim();
+      if (!text) {
+        setErrorMsg("We didn't catch that. Try again.");
+        return;
+      }
+
+      setIsProcessing(true);
+      parseMutation.mutate(text);
+    },
+    [parseMutation],
+  );
 
   const toggleRecording = () => {
     setErrorMsg(null);
@@ -184,8 +195,10 @@ export function VoiceOrder({
     if (!parsedOrder) return;
     setParsedOrder({
       ...parsedOrder,
-      parsed_items: parsedOrder.parsed_items.map(item =>
-        item.menu_item_id === id ? { ...item, quantity: Math.max(0, (Number(item.quantity) || 1) + delta) } : item
+      parsed_items: parsedOrder.parsed_items.map((item) =>
+        item.menu_item_id === id
+          ? { ...item, quantity: Math.max(0, (Number(item.quantity) || 1) + delta) }
+          : item,
       ),
     });
   };
@@ -213,22 +226,25 @@ export function VoiceOrder({
             <Loader2 className="size-4 animate-spin" /> Thinking...
           </div>
         )}
-        
+
         <Button
           size="icon"
-          className={`size-14 rounded-full shadow-lg transition-transform ${recording ? 'bg-destructive hover:bg-destructive/90 scale-110' : 'bg-primary hover:bg-primary/90'}`}
+          className={`size-14 rounded-full shadow-lg transition-transform ${recording ? "bg-destructive hover:bg-destructive/90 scale-110" : "bg-primary hover:bg-primary/90"}`}
           onClick={toggleRecording}
         >
           {recording ? <StopCircle className="size-6" /> : <Mic className="size-6" />}
         </Button>
       </div>
 
-      <Dialog open={showConfirm || isNoMatch} onOpenChange={open => {
-        if (!open) {
-          setShowConfirm(false);
-          setParsedOrder(null);
-        }
-      }}>
+      <Dialog
+        open={showConfirm || isNoMatch}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowConfirm(false);
+            setParsedOrder(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -237,36 +253,46 @@ export function VoiceOrder({
           </DialogHeader>
 
           {isNoMatch ? (
-            <p className="text-sm text-muted-foreground">
-              Try tapping them from the menu instead.
-            </p>
+            <p className="text-sm text-muted-foreground">Try tapping them from the menu instead.</p>
           ) : (
             <div className="space-y-4 py-4">
-              {parsedOrder?.parsed_items.map((item) => item.quantity > 0 && (
-                <div key={item.menu_item_id} className="flex items-center justify-between bg-card border rounded-lg p-3">
-                  <div>
-                    <p className="font-medium text-sm">{item.name}</p>
-                    {item.customizations && (
-                      <p className="text-xs text-muted-foreground">{item.customizations}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 bg-muted/50 rounded-full p-1">
-                    <button
-                      className="size-7 rounded-full bg-background border shadow-sm grid place-items-center"
-                      onClick={() => updateItemQty(item.menu_item_id, -1)}
+              {parsedOrder?.parsed_items.map(
+                (item) =>
+                  item.quantity > 0 && (
+                    <div
+                      key={item.menu_item_id}
+                      className="flex items-center justify-between bg-card border rounded-lg p-3"
                     >
-                      {item.quantity === 1 ? <Trash2 className="size-3.5 text-destructive" /> : <Minus className="size-3.5" />}
-                    </button>
-                    <span className="text-sm font-medium w-4 text-center text-foreground">{item.quantity}</span>
-                    <button
-                      className="size-7 rounded-full bg-background border shadow-sm grid place-items-center"
-                      onClick={() => updateItemQty(item.menu_item_id, 1)}
-                    >
-                      <Plus className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div>
+                        <p className="font-medium text-sm">{item.name}</p>
+                        {item.customizations && (
+                          <p className="text-xs text-muted-foreground">{item.customizations}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 bg-muted/50 rounded-full p-1">
+                        <button
+                          className="size-7 rounded-full bg-background border shadow-sm grid place-items-center"
+                          onClick={() => updateItemQty(item.menu_item_id, -1)}
+                        >
+                          {item.quantity === 1 ? (
+                            <Trash2 className="size-3.5 text-destructive" />
+                          ) : (
+                            <Minus className="size-3.5" />
+                          )}
+                        </button>
+                        <span className="text-sm font-medium w-4 text-center text-foreground">
+                          {item.quantity}
+                        </span>
+                        <button
+                          className="size-7 rounded-full bg-background border shadow-sm grid place-items-center"
+                          onClick={() => updateItemQty(item.menu_item_id, 1)}
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ),
+              )}
 
               {parsedOrder?.clarification_needed && (
                 <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
@@ -274,14 +300,18 @@ export function VoiceOrder({
                     {parsedOrder.clarification_needed}
                   </p>
                   <div className="flex gap-2">
-                    <Input 
-                      value={clarificationInput} 
-                      onChange={e => setClarificationInput(e.target.value)}
+                    <Input
+                      value={clarificationInput}
+                      onChange={(e) => setClarificationInput(e.target.value)}
                       placeholder="Type your answer..."
                       className="bg-background h-9 text-sm"
-                      onKeyDown={e => e.key === "Enter" && handleClarify()}
+                      onKeyDown={(e) => e.key === "Enter" && handleClarify()}
                     />
-                    <Button size="sm" onClick={handleClarify} disabled={!clarificationInput.trim() || isProcessing}>
+                    <Button
+                      size="sm"
+                      onClick={handleClarify}
+                      disabled={!clarificationInput.trim() || isProcessing}
+                    >
                       {isProcessing ? <Loader2 className="size-4 animate-spin" /> : "Answer"}
                     </Button>
                   </div>
@@ -291,11 +321,19 @@ export function VoiceOrder({
           )}
 
           <DialogFooter className="flex-row sm:justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowConfirm(false)} className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+              className="w-full sm:w-auto"
+            >
               Start over
             </Button>
             {!isNoMatch && (
-              <Button onClick={handleConfirmAll} disabled={isProcessing || !hasItems} className="w-full sm:w-auto">
+              <Button
+                onClick={handleConfirmAll}
+                disabled={isProcessing || !hasItems}
+                className="w-full sm:w-auto"
+              >
                 {isProcessing ? <Loader2 className="size-4 animate-spin" /> : "Add to cart"}
               </Button>
             )}

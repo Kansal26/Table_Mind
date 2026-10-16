@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockSupabase, mockWalletBalance } = vi.hoisted(() => ({
   mockSupabase: {
@@ -9,47 +9,47 @@ const { mockSupabase, mockWalletBalance } = vi.hoisted(() => ({
   mockWalletBalance: vi.fn(),
 }));
 
-vi.mock('@/integrations/supabase/client.server', () => ({
+vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: mockSupabase,
 }));
 
-vi.mock('./wallet.server', () => ({
+vi.mock("./wallet.server", () => ({
   getWalletBalance: mockWalletBalance,
 }));
 
-vi.mock('./coupons.server', () => ({
+vi.mock("./coupons.server", () => ({
   evaluateCoupons: vi.fn(),
 }));
 
-import { evaluateCoupons } from './coupons.server';
-import { normalizeQrToken, recalcTotals } from './ordering.server';
+import { evaluateCoupons } from "./coupons.server";
+import { normalizeQrToken, recalcTotals } from "./ordering.server";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('normalizeQrToken', () => {
-  it('normalizes encoded, trimmed, and whitespace-padded values', () => {
-    expect(normalizeQrToken('  %7Babc%7D  ')).toBe('{abc}');
-    expect(normalizeQrToken('  sample-table  ')).toBe('sample-table');
-    expect(normalizeQrToken('')).toBeNull();
-    expect(normalizeQrToken('a'.repeat(201))).toBeNull();
+describe("normalizeQrToken", () => {
+  it("normalizes encoded, trimmed, and whitespace-padded values", () => {
+    expect(normalizeQrToken("  %7Babc%7D  ")).toBe("{abc}");
+    expect(normalizeQrToken("  sample-table  ")).toBe("sample-table");
+    expect(normalizeQrToken("")).toBeNull();
+    expect(normalizeQrToken("a".repeat(201))).toBeNull();
   });
 
-  it('keeps malformed percent-encoding safe and avoids empty tokens', () => {
-    expect(normalizeQrToken('%E0%A4%A')).toBe('%E0%A4%A');
-    expect(normalizeQrToken('   ')).toBeNull();
+  it("keeps malformed percent-encoding safe and avoids empty tokens", () => {
+    expect(normalizeQrToken("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(normalizeQrToken("   ")).toBeNull();
   });
 });
 
-describe('recalcTotals', () => {
-  it('returns zero totals for empty carts', async () => {
+describe("recalcTotals", () => {
+  it("returns zero totals for empty carts", async () => {
     vi.mocked(evaluateCoupons).mockResolvedValue([]);
 
     let updatePayload: Record<string, unknown> | null = null;
 
     mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'order_items') {
+      if (table === "order_items") {
         return {
           select: () => ({
             eq: () => ({
@@ -59,7 +59,7 @@ describe('recalcTotals', () => {
         };
       }
 
-      if (table === 'order_discounts') {
+      if (table === "order_discounts") {
         return {
           select: () => ({
             eq: () => ({
@@ -70,7 +70,7 @@ describe('recalcTotals', () => {
         };
       }
 
-      if (table === 'orders') {
+      if (table === "orders") {
         return {
           select: () => ({
             eq: () => ({
@@ -78,7 +78,7 @@ describe('recalcTotals', () => {
                 data: {
                   user_id: null,
                   points_redeemed: 0,
-                  sessions: { tables: { restaurant_id: 'restaurant-1' } },
+                  sessions: { tables: { restaurant_id: "restaurant-1" } },
                 },
                 error: null,
               }),
@@ -96,7 +96,7 @@ describe('recalcTotals', () => {
       throw new Error(`Unexpected table: ${table}`);
     });
 
-    await recalcTotals('order-empty');
+    await recalcTotals("order-empty");
 
     expect(updatePayload).toMatchObject({
       subtotal: 0,
@@ -108,27 +108,27 @@ describe('recalcTotals', () => {
     });
   });
 
-  it('applies coupon discounts, loyalty credits, and tax to the final total', async () => {
+  it("applies coupon discounts, loyalty credits, and tax to the final total", async () => {
     const lines = [
       {
-        id: 'line-1',
+        id: "line-1",
         qty: 2,
-        menu_item: { id: 'item-1', name: 'Butter Naan', price: 120 },
+        menu_item: { id: "item-1", name: "Butter Naan", price: 120 },
       },
       {
-        id: 'line-2',
+        id: "line-2",
         qty: 1,
-        menu_item: { id: 'item-2', name: 'Paneer Tikka', price: 240 },
+        menu_item: { id: "item-2", name: "Paneer Tikka", price: 240 },
       },
     ];
 
     vi.mocked(evaluateCoupons).mockResolvedValue([
       {
-        id: 'coupon-1',
-        restaurant_id: 'restaurant-1',
-        name: 'Lunch combo',
-        description: '10% off',
-        rule_json: { type: 'min_spend', amount: 300, discount_pct: 10 },
+        id: "coupon-1",
+        restaurant_id: "restaurant-1",
+        name: "Lunch combo",
+        description: "10% off",
+        rule_json: { type: "min_spend", amount: 300, discount_pct: 10 },
         valid_from: null,
         valid_to: null,
         active: true,
@@ -141,7 +141,7 @@ describe('recalcTotals', () => {
     let updatePayload: Record<string, unknown> | null = null;
 
     mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'order_items') {
+      if (table === "order_items") {
         return {
           select: () => ({
             eq: () => ({
@@ -158,7 +158,7 @@ describe('recalcTotals', () => {
         };
       }
 
-      if (table === 'order_discounts') {
+      if (table === "order_discounts") {
         return {
           select: () => ({
             eq: () => ({
@@ -169,15 +169,15 @@ describe('recalcTotals', () => {
         };
       }
 
-      if (table === 'orders') {
+      if (table === "orders") {
         return {
           select: () => ({
             eq: () => ({
               single: async () => ({
                 data: {
-                  user_id: 'user-1',
+                  user_id: "user-1",
                   points_redeemed: 30,
-                  sessions: { tables: { restaurant_id: 'restaurant-1' } },
+                  sessions: { tables: { restaurant_id: "restaurant-1" } },
                 },
                 error: null,
               }),
@@ -192,7 +192,7 @@ describe('recalcTotals', () => {
         };
       }
 
-      if (table === 'loyalty_settings') {
+      if (table === "loyalty_settings") {
         return {
           select: () => ({
             eq: () => ({
@@ -212,10 +212,10 @@ describe('recalcTotals', () => {
       throw new Error(`Unexpected table: ${table}`);
     });
 
-    await recalcTotals('order-1');
+    await recalcTotals("order-1");
 
-    expect(vi.mocked(evaluateCoupons)).toHaveBeenCalledWith('order-1', expect.any(Array), 480);
-    expect(mockWalletBalance).toHaveBeenCalledWith('user-1', 'restaurant-1');
+    expect(vi.mocked(evaluateCoupons)).toHaveBeenCalledWith("order-1", expect.any(Array), 480);
+    expect(mockWalletBalance).toHaveBeenCalledWith("user-1", "restaurant-1");
     expect(updatePayload).toMatchObject({
       subtotal: 480,
       discount_amount: 48,
@@ -225,5 +225,4 @@ describe('recalcTotals', () => {
       tax: 31.62,
     });
   });
-
 });

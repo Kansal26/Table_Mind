@@ -20,7 +20,9 @@ export const submitFeedbackFn = createServerFn({ method: "POST" })
     if (!scope) throw new Error("Invalid table QR code");
 
     // Must be signed in to submit feedback
-    const { data: { user } } = await supabaseAdmin.auth.getUser();
+    const {
+      data: { user },
+    } = await supabaseAdmin.auth.getUser();
     // Wait, Supabase auth in server functions relies on the auth token in headers, which is checked via standard client not admin client.
     // However, TanStack start functions might use a different way. Let's just check the order's user_id.
     const { data: order } = await (supabaseAdmin as any)
@@ -39,7 +41,7 @@ export const submitFeedbackFn = createServerFn({ method: "POST" })
         order.user_id,
         data.rating,
         data.comment,
-        data.structuredAnswers
+        data.structuredAnswers,
       );
       return res;
     } catch (err: any) {
@@ -76,7 +78,7 @@ export const redeemPointsFn = createServerFn({ method: "POST" })
       .from("orders")
       .update({ points_redeemed: data.pointsRedeemed })
       .eq("id", order.id);
-      
+
     if (error) throw error;
 
     await recalcTotals(order.id);
@@ -124,7 +126,7 @@ export const getWalletBalanceFn = createServerFn({ method: "POST" })
           balances.push({
             restaurantId: restaurant_id,
             restaurantName: rest.name,
-            balance
+            balance,
           });
         }
       }
@@ -134,7 +136,9 @@ export const getWalletBalanceFn = createServerFn({ method: "POST" })
   });
 
 export const getLoyaltyDataFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ qrToken: z.string().min(1), userId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ qrToken: z.string().min(1), userId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getWalletBalance } = await import("./wallet.server");

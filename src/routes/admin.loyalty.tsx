@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ function AdminLoyaltyPage() {
     points_per_rupee: 0.5,
     min_order_value_to_redeem: 200,
     max_points_redeemable_per_order: 100,
-    points_expiry_days: 90 as number | null
+    points_expiry_days: 90 as number | null,
   });
 
   useEffect(() => {
@@ -45,19 +45,19 @@ function AdminLoyaltyPage() {
         points_per_rupee: s.points_per_rupee ?? 0.5,
         min_order_value_to_redeem: s.min_order_value_to_redeem ?? 200,
         max_points_redeemable_per_order: s.max_points_redeemable_per_order ?? 100,
-        points_expiry_days: s.points_expiry_days ?? 90
+        points_expiry_days: s.points_expiry_days ?? 90,
       });
     }
   }, [settings]);
 
   const updateMutation = useMutation({
-    mutationFn: (updates: typeof form) => 
-      updateLoyaltySettingsFn({ 
-        data: { 
-          token, 
-          restaurantId: restaurant.id, 
-          ...updates 
-        } 
+    mutationFn: (updates: typeof form) =>
+      updateLoyaltySettingsFn({
+        data: {
+          token,
+          restaurantId: restaurant.id,
+          ...updates,
+        },
       }),
     onSuccess: () => {
       toast.success("Loyalty settings updated successfully");
@@ -65,7 +65,7 @@ function AdminLoyaltyPage() {
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to update settings");
-    }
+    },
   });
 
   if (isLoading) {
@@ -92,7 +92,9 @@ function AdminLoyaltyPage() {
       <div className="space-y-8 rounded-xl border border-border bg-card p-6 shadow-soft">
         <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-4">
           <div>
-            <Label className="text-base font-semibold text-foreground">Enable Loyalty Program</Label>
+            <Label className="text-base font-semibold text-foreground">
+              Enable Loyalty Program
+            </Label>
             <p className="text-sm text-muted-foreground mt-1">
               If disabled, no points will be awarded or redeemable by customers.
             </p>
@@ -103,7 +105,9 @@ function AdminLoyaltyPage() {
           />
         </div>
 
-        <div className={`space-y-6 transition-opacity duration-300 ${form.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+        <div
+          className={`space-y-6 transition-opacity duration-300 ${form.enabled ? "opacity-100" : "opacity-50 pointer-events-none"}`}
+        >
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-foreground border-b pb-2">Earning Rules</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -113,7 +117,9 @@ function AdminLoyaltyPage() {
                   type="number"
                   min="0"
                   value={form.points_for_rating}
-                  onChange={(e) => setForm({ ...form, points_for_rating: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({ ...form, points_for_rating: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -122,7 +128,9 @@ function AdminLoyaltyPage() {
                   type="number"
                   min="0"
                   value={form.points_for_comment}
-                  onChange={(e) => setForm({ ...form, points_for_comment: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({ ...form, points_for_comment: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -131,7 +139,9 @@ function AdminLoyaltyPage() {
                   type="number"
                   min="0"
                   value={form.points_for_question}
-                  onChange={(e) => setForm({ ...form, points_for_question: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({ ...form, points_for_question: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
             </div>
@@ -147,7 +157,9 @@ function AdminLoyaltyPage() {
                   min="0"
                   step="0.1"
                   value={form.points_per_rupee}
-                  onChange={(e) => setForm({ ...form, points_per_rupee: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({ ...form, points_per_rupee: parseFloat(e.target.value) || 0 })
+                  }
                 />
                 <p className="text-xs text-muted-foreground">E.g., 0.5 means 10 points = ₹5 off</p>
               </div>
@@ -157,7 +169,9 @@ function AdminLoyaltyPage() {
                   type="number"
                   min="0"
                   value={form.min_order_value_to_redeem}
-                  onChange={(e) => setForm({ ...form, min_order_value_to_redeem: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({ ...form, min_order_value_to_redeem: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -166,7 +180,12 @@ function AdminLoyaltyPage() {
                   type="number"
                   min="0"
                   value={form.max_points_redeemable_per_order}
-                  onChange={(e) => setForm({ ...form, max_points_redeemable_per_order: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      max_points_redeemable_per_order: parseInt(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -180,22 +199,31 @@ function AdminLoyaltyPage() {
                 type="number"
                 min="0"
                 value={form.points_expiry_days || ""}
-                onChange={(e) => setForm({ ...form, points_expiry_days: e.target.value ? parseInt(e.target.value) : null })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    points_expiry_days: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
                 placeholder="Leave blank for never"
               />
               <p className="text-xs text-muted-foreground">Leave blank if points never expire.</p>
             </div>
           </div>
         </div>
-        
+
         <div className="pt-6">
-          <Button 
-            className="w-full sm:w-auto" 
+          <Button
+            className="w-full sm:w-auto"
             size="lg"
             disabled={isSaving}
             onClick={() => updateMutation.mutate(form)}
           >
-            {isSaving ? <Loader2 className="mr-2 animate-spin size-4" /> : <Save className="mr-2 size-4" />}
+            {isSaving ? (
+              <Loader2 className="mr-2 animate-spin size-4" />
+            ) : (
+              <Save className="mr-2 size-4" />
+            )}
             Save Settings
           </Button>
         </div>

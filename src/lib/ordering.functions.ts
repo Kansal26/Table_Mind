@@ -54,7 +54,9 @@ export const resolveTableFn = createServerFn({ method: "POST" })
 
     const { data: table, error } = await supabaseAdmin
       .from("tables")
-      .select("id, label, restaurant_id, restaurants(name, address, tagline, logo_url, banner_url, is_active)")
+      .select(
+        "id, label, restaurant_id, restaurants(name, address, tagline, logo_url, banner_url, is_active)",
+      )
       .eq("id", scope.tableId)
       .maybeSingle();
     if (error) throw error;
@@ -103,7 +105,11 @@ export const joinSessionFn = createServerFn({ method: "POST" })
         const { data: authData } = await supabaseAdmin.auth.getUser(token);
         if (authData.user) {
           userId = authData.user.id;
-          const { data: profile } = await supabaseAdmin.from("profiles").select("name").eq("id", userId).maybeSingle();
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("name")
+            .eq("id", userId)
+            .maybeSingle();
           if (profile?.name) authName = profile.name;
         }
       }
@@ -129,9 +135,9 @@ export const joinSessionFn = createServerFn({ method: "POST" })
     // Get current participant count
     const { count: currentCount } = await supabaseAdmin
       .from("session_participants")
-      .select("*", { count: 'exact', head: true })
+      .select("*", { count: "exact", head: true })
       .eq("session_id", scope.sessionId);
-      
+
     const count = currentCount ?? 0;
     if (!participantName) {
       participantName = data.participantName || `Guest ${count + 1}`;
@@ -157,9 +163,8 @@ export const joinSessionFn = createServerFn({ method: "POST" })
 export const fetchCartFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => qrTokenSchema.parse(data))
   .handler(async ({ data }) => {
-    const { requireSessionScope, findCartOrder, loadOrderLines } = await import(
-      "./ordering.server"
-    );
+    const { requireSessionScope, findCartOrder, loadOrderLines } =
+      await import("./ordering.server");
     const scope = await requireSessionScope(data.qrToken);
     if (!scope) return { order: null, lines: [] };
 
@@ -181,9 +186,8 @@ export const fetchCartFn = createServerFn({ method: "POST" })
 export const addToCartFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => addToCartSchema.parse(data))
   .handler(async ({ data }) => {
-    const { requireSessionScope, ensureCartOrder, recalcTotals } = await import(
-      "./ordering.server"
-    );
+    const { requireSessionScope, ensureCartOrder, recalcTotals } =
+      await import("./ordering.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const scope = await requireSessionScope(data.qrToken);
@@ -216,7 +220,7 @@ export const addToCartFn = createServerFn({ method: "POST" })
     }
 
     const orderId = await ensureCartOrder(scope.sessionId, userId);
-    
+
     // Get participant info if device token provided
     let participantName = null;
     if (data.deviceToken) {
@@ -228,7 +232,11 @@ export const addToCartFn = createServerFn({ method: "POST" })
         .maybeSingle();
       if (participant) {
         if (participant.user_id) {
-          const { data: profile } = await supabaseAdmin.from("profiles").select("name").eq("id", participant.user_id).maybeSingle();
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("name")
+            .eq("id", participant.user_id)
+            .maybeSingle();
           if (profile?.name) participantName = profile.name;
         } else {
           participantName = participant.guest_name;
@@ -247,7 +255,7 @@ export const addToCartFn = createServerFn({ method: "POST" })
       added_by_name: participantName,
       added_by_device_token: data.deviceToken || null,
     });
-    
+
     if (error) {
       if (error.message.includes("ALLERGY_WARNING")) {
         return { orderId: null, requiresAllergyAck: true, message: error.message };
@@ -295,9 +303,13 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
       .select("allergens, dietary_tags")
       .eq("id", userId)
       .maybeSingle();
-    
-    const userAllergens = (profile?.allergens || []).map((a: any) => String(a).toLowerCase().trim());
-    const userDietaryTags = (profile?.dietary_tags || []).map((d: any) => String(d).toLowerCase().trim());
+
+    const userAllergens = (profile?.allergens || []).map((a: any) =>
+      String(a).toLowerCase().trim(),
+    );
+    const userDietaryTags = (profile?.dietary_tags || []).map((d: any) =>
+      String(d).toLowerCase().trim(),
+    );
 
     // Get all available items for the restaurant
     const { data: allItems } = await supabaseAdmin
@@ -305,17 +317,17 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
       .select("*")
       .eq("restaurant_id", scope.restaurantId)
       .eq("available", true);
-      
+
     if (!allItems) return [];
 
     // Hard Filter: Remove items with allergens
-    const safeItems = allItems.filter(item => {
+    const safeItems = allItems.filter((item) => {
       const itemAllergens = (item.allergens || []).map((a: any) => String(a).toLowerCase().trim());
       const hasIntersection = itemAllergens.some((a: any) => userAllergens.includes(a));
       return !hasIntersection;
     });
 
-    const recommendations: { item: any, reason: string, source: string }[] = [];
+    const recommendations: { item: any; reason: string; source: string }[] = [];
     const addedIds = new Set<string>();
 
     const addRec = (item: any, reason: string, source: string = "rule") => {
@@ -339,10 +351,12 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
         .from("order_items")
         .select("menu_item_id")
         .eq("order_id", currentCart.id);
-      cartItemIds = cartItems?.map(ci => ci.menu_item_id) || [];
+      cartItemIds = cartItems?.map((ci) => ci.menu_item_id) || [];
     }
 
-    const cartItemNames = cartItemIds.map(id => allItems.find(i => i.id === id)?.name).filter(Boolean) as string[];
+    const cartItemNames = cartItemIds
+      .map((id) => allItems.find((i) => i.id === id)?.name)
+      .filter(Boolean) as string[];
 
     // --- GLOBAL PRIORITY 1: Your most ordered dish ---
     const { data: pastOrders } = await supabaseAdmin
@@ -352,12 +366,12 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
       .eq("status", "paid");
 
     if (pastOrders && pastOrders.length > 0) {
-      const orderIds = pastOrders.map(o => o.id);
+      const orderIds = pastOrders.map((o) => o.id);
       const { data: pastItems } = await supabaseAdmin
         .from("order_items")
         .select("menu_item_id")
         .in("order_id", orderIds);
-        
+
       if (pastItems && pastItems.length > 0) {
         const counts: Record<string, number> = {};
         for (const pi of pastItems) {
@@ -365,7 +379,7 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
         }
         const sortedPast = Object.entries(counts).sort((a, b) => b[1] - a[1]);
         for (const [itemId, _] of sortedPast) {
-          const item = safeItems.find(i => i.id === itemId);
+          const item = safeItems.find((i) => i.id === itemId);
           if (item && !cartItemIds.includes(itemId)) {
             addRec(item, "Your most ordered dish", "rule");
             break; // Only the absolute top item
@@ -373,17 +387,17 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
         }
       }
     }
-      
+
     let useRuleFallback = true;
 
     // --- LLM ENGINE (Priority 2) ---
     if (pastOrders && pastOrders.length >= 2) {
       try {
-        const apiKey = process.env['GROQ_API_KEY'];
+        const apiKey = process.env["GROQ_API_KEY"];
         if (!apiKey) throw new Error("GROQ_API_KEY is missing");
         const groq = new Groq({ apiKey });
 
-        const orderIds = pastOrders.map(o => o.id);
+        const orderIds = pastOrders.map((o) => o.id);
         const { data: pastItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_items(name)")
@@ -394,9 +408,11 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
           .from("recommendation_logs")
           .select("item_id")
           .eq("session_id", scope.sessionId);
-        const alreadyShownIds = new Set((alreadyShown || []).map(r => r.item_id));
+        const alreadyShownIds = new Set((alreadyShown || []).map((r) => r.item_id));
 
-        const menuContext = safeItems.map(i => `[ID: ${i.id}] ${i.name} - ${i.category}`).join("\n");
+        const menuContext = safeItems
+          .map((i) => `[ID: ${i.id}] ${i.name} - ${i.category}`)
+          .join("\n");
 
         const prompt = `You are a restaurant recommendation assistant.
 Based on the user's history and current cart, recommend up to 5 items from the menu.
@@ -424,28 +440,32 @@ IMPORTANT RULES:
         const responsePromise = groq.chat.completions.create({
           model: "llama-3.3-70b-versatile",
           messages: [{ role: "system", content: prompt }],
-          response_format: { type: "json_object" }
+          response_format: { type: "json_object" },
         });
 
-        const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 3000),
+        );
         const response = await Promise.race([responsePromise, timeoutPromise]);
-        
+
         const text = response.choices[0]?.message?.content;
         if (!text) throw new Error("Empty LLM response");
 
-        const parsed = JSON.parse(text) as { recommendations: { menu_item_id: string, reason: string }[] };
-        
+        const parsed = JSON.parse(text) as {
+          recommendations: { menu_item_id: string; reason: string }[];
+        };
+
         let addedLlm = 0;
         if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
           for (const rec of parsed.recommendations) {
-            const item = safeItems.find(i => i.id === rec.menu_item_id);
+            const item = safeItems.find((i) => i.id === rec.menu_item_id);
             if (item && !cartItemNames.includes(item.name) && !alreadyShownIds.has(item.id)) {
               addRec(item, rec.reason, "llm");
               addedLlm++;
             }
           }
         }
-        
+
         if (addedLlm > 0) {
           useRuleFallback = false;
         }
@@ -458,12 +478,12 @@ IMPORTANT RULES:
     if (useRuleFallback) {
       // Rule 1: Ordered before
       if (pastOrders && pastOrders.length > 0) {
-        const orderIds = pastOrders.map(o => o.id);
+        const orderIds = pastOrders.map((o) => o.id);
         const { data: pastItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_item_id")
           .in("order_id", orderIds);
-          
+
         if (pastItems) {
           const counts: Record<string, number> = {};
           for (const pi of pastItems) {
@@ -471,7 +491,7 @@ IMPORTANT RULES:
           }
           const sortedPast = Object.entries(counts).sort((a, b) => b[1] - a[1]);
           for (const [itemId, _] of sortedPast) {
-            const item = safeItems.find(i => i.id === itemId);
+            const item = safeItems.find((i) => i.id === itemId);
             if (item) addRec(item, "You ordered this before");
           }
         }
@@ -483,15 +503,15 @@ IMPORTANT RULES:
           .from("order_items")
           .select("order_id")
           .in("menu_item_id", cartItemIds);
-          
+
         if (coOrders && coOrders.length > 0) {
-          const coOrderIds = [...new Set(coOrders.map(co => co.order_id))];
+          const coOrderIds = [...new Set(coOrders.map((co) => co.order_id))];
           if (coOrderIds.length > 0) {
             const { data: coItems } = await supabaseAdmin
               .from("order_items")
               .select("menu_item_id")
               .in("order_id", coOrderIds);
-              
+
             if (coItems) {
               const counts: Record<string, number> = {};
               for (const ci of coItems) {
@@ -501,7 +521,7 @@ IMPORTANT RULES:
               }
               const sortedCo = Object.entries(counts).sort((a, b) => b[1] - a[1]);
               for (const [itemId, _] of sortedCo) {
-                const item = safeItems.find(i => i.id === itemId);
+                const item = safeItems.find((i) => i.id === itemId);
                 if (item) addRec(item, "Frequently ordered together");
               }
             }
@@ -516,26 +536,27 @@ IMPORTANT RULES:
         .not("rating", "is", null);
 
       if (allFeedback && allFeedback.length > 0) {
-        const fbOrderIds = allFeedback.map(f => f.order_id);
+        const fbOrderIds = allFeedback.map((f) => f.order_id);
         const { data: fbOrderItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_item_id, order_id")
           .in("order_id", fbOrderIds);
-          
+
         if (fbOrderItems && fbOrderItems.length > 0) {
-          const itemRatings: Record<string, { sum: number, count: number }> = {};
+          const itemRatings: Record<string, { sum: number; count: number }> = {};
           for (const fboi of fbOrderItems) {
-            const fb = allFeedback.find(f => f.order_id === fboi.order_id);
+            const fb = allFeedback.find((f) => f.order_id === fboi.order_id);
             if (fb && fb.rating != null) {
-              if (!itemRatings[fboi.menu_item_id]) itemRatings[fboi.menu_item_id] = { sum: 0, count: 0 };
+              if (!itemRatings[fboi.menu_item_id])
+                itemRatings[fboi.menu_item_id] = { sum: 0, count: 0 };
               itemRatings[fboi.menu_item_id]!.sum += fb.rating;
               itemRatings[fboi.menu_item_id]!.count += 1;
             }
           }
-          
+
           for (const [itemId, stats] of Object.entries(itemRatings)) {
-            if (stats.count >= 3 && (stats.sum / stats.count) >= 4.5) {
-              const item = safeItems.find(i => i.id === itemId);
+            if (stats.count >= 3 && stats.sum / stats.count >= 4.5) {
+              const item = safeItems.find((i) => i.id === itemId);
               if (item && !cartItemIds.includes(itemId)) {
                 addRec(item, "Highly rated by diners", "rule");
               }
@@ -547,7 +568,9 @@ IMPORTANT RULES:
       // Rule 3: Dietary Tags
       if (userDietaryTags.length > 0) {
         for (const item of safeItems) {
-          const itemTags = (item.dietary_tags || []).map((t: any) => String(t).toLowerCase().trim());
+          const itemTags = (item.dietary_tags || []).map((t: any) =>
+            String(t).toLowerCase().trim(),
+          );
           const hasTag = itemTags.some((t: any) => userDietaryTags.includes(t));
           if (hasTag) addRec(item, "Matches your dietary preferences");
         }
@@ -560,22 +583,24 @@ IMPORTANT RULES:
         .from("orders")
         .select("id")
         .gte("created_at", oneWeekAgo.toISOString());
-        
+
       if (recentOrders && recentOrders.length > 0) {
-        const recentOrderIds = recentOrders.map(o => o.id);
+        const recentOrderIds = recentOrders.map((o) => o.id);
         const { data: recentItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_item_id")
           .in("order_id", recentOrderIds);
-          
+
         if (recentItems && recentItems.length > 0) {
           const counts: Record<string, number> = {};
           for (const ri of recentItems) {
             counts[ri.menu_item_id] = (counts[ri.menu_item_id] || 0) + 1;
           }
-          const sortedRecent = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+          const sortedRecent = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
           for (const [itemId, _] of sortedRecent) {
-            const item = safeItems.find(i => i.id === itemId);
+            const item = safeItems.find((i) => i.id === itemId);
             if (item && !cartItemIds.includes(itemId)) {
               addRec(item, "Popular this week", "rule");
             }
@@ -587,7 +612,6 @@ IMPORTANT RULES:
       for (const item of safeItems) {
         addRec(item, "Popular choice");
       }
-
     } // end useRuleFallback
 
     // Fetch Kitchen Load
@@ -614,27 +638,29 @@ IMPORTANT RULES:
     }
 
     // Log recommendations
-    const recsToLog = recommendations.map(r => ({
+    const recsToLog = recommendations.map((r) => ({
       user_id: userId,
       session_id: scope.sessionId,
       item_id: r.item.id,
       reason: r.reason,
-      source: r.source
+      source: r.source,
     }));
 
     if (recsToLog.length > 0) {
       await supabaseAdmin.from("recommendation_logs").insert(recsToLog);
     }
 
-    return recommendations.map(r => ({ ...r.item, price: Number(r.item.price), _reason: r.reason }));
+    return recommendations.map((r) => ({
+      ...r.item,
+      price: Number(r.item.price),
+      _reason: r.reason,
+    }));
   });
 
 export const setLineQtyFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => lineQtySchema.parse(data))
   .handler(async ({ data }) => {
-    const { requireSessionScope, findCartOrder, recalcTotals } = await import(
-      "./ordering.server"
-    );
+    const { requireSessionScope, findCartOrder, recalcTotals } = await import("./ordering.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const scope = await requireSessionScope(data.qrToken);
@@ -669,9 +695,7 @@ export const setLineQtyFn = createServerFn({ method: "POST" })
 export const fetchBillFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => orderSchema.parse(data))
   .handler(async ({ data }) => {
-    const { resolveTableId, requireOwnedOrder, loadOrderLines } = await import(
-      "./ordering.server"
-    );
+    const { resolveTableId, requireOwnedOrder, loadOrderLines } = await import("./ordering.server");
 
     const tableId = await resolveTableId(data.qrToken);
     if (!tableId) return null;
@@ -697,9 +721,7 @@ export const fetchBillFn = createServerFn({ method: "POST" })
 export const payOrderFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => orderSchema.parse(data))
   .handler(async ({ data }) => {
-    const { resolveTableId, requireOwnedOrder, recalcTotals } = await import(
-      "./ordering.server"
-    );
+    const { resolveTableId, requireOwnedOrder, recalcTotals } = await import("./ordering.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const tableId = await resolveTableId(data.qrToken);
@@ -714,14 +736,22 @@ export const payOrderFn = createServerFn({ method: "POST" })
     // Fetch the updated order to get the final credits_applied
     const { data: updatedOrder } = await supabaseAdmin
       .from("orders")
-      .select("credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))")
+      .select(
+        "credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))",
+      )
       .eq("id", order.id)
       .single();
 
     const pts1 = updatedOrder?.points_redeemed ?? 0;
     if (updatedOrder && pts1 > 0 && updatedOrder.user_id) {
       const { deductWallet } = await import("./wallet.server");
-      await deductWallet(updatedOrder.user_id, pts1, "Redeemed on order", order.id, (updatedOrder as any).sessions.tables.restaurant_id);
+      await deductWallet(
+        updatedOrder.user_id,
+        pts1,
+        "Redeemed on order",
+        order.id,
+        (updatedOrder as any).sessions.tables.restaurant_id,
+      );
     }
 
     const { error } = await supabaseAdmin
@@ -748,7 +778,8 @@ export const payOrderFn = createServerFn({ method: "POST" })
     try {
       const { data: orderData } = await supabaseAdmin
         .from("orders")
-        .select(`
+        .select(
+          `
           total, subtotal, tax, discount_amount, credits_applied,
           sessions (
             tables (
@@ -766,31 +797,33 @@ export const payOrderFn = createServerFn({ method: "POST" })
               name
             )
           )
-        `)
+        `,
+        )
         .eq("id", data.orderId)
         .single();
-      
+
       if (orderData?.sessions?.tables) {
         const table = orderData.sessions.tables;
         const restaurant = table.restaurants;
         const ownerId = restaurant?.owner_id;
-        
+
         const items = orderData.order_items.map((oi: any) => ({
           name: oi.menu_items?.name || "Unknown Item",
           qty: oi.qty,
-          customizations: oi.customizations
+          customizations: oi.customizations,
         }));
 
         if (ownerId) {
           const { data: ownerData } = await supabaseAdmin.auth.admin.getUserById(ownerId);
           let ownerEmail = ownerData?.user?.email;
 
-          if (!ownerEmail && process.env['RESTAURANT_NOTIFICATION_EMAIL']) {
-            ownerEmail = process.env['RESTAURANT_NOTIFICATION_EMAIL'];
+          if (!ownerEmail && process.env["RESTAURANT_NOTIFICATION_EMAIL"]) {
+            ownerEmail = process.env["RESTAURANT_NOTIFICATION_EMAIL"];
           }
 
           if (ownerEmail) {
-            const { sendNewOrderNotification, sendGuestReceiptEmail } = await import("./email.server");
+            const { sendNewOrderNotification, sendGuestReceiptEmail } =
+              await import("./email.server");
             await sendNewOrderNotification({
               restaurantName: restaurant?.name || "Restaurant",
               tableName: table.label || "Table",
@@ -799,7 +832,7 @@ export const payOrderFn = createServerFn({ method: "POST" })
               discount: Number(orderData.discount_amount),
               total: Number(orderData.total),
               ownerEmail: ownerEmail,
-              orderId: order.id
+              orderId: order.id,
             });
 
             if (data.guestEmail) {
@@ -813,7 +846,7 @@ export const payOrderFn = createServerFn({ method: "POST" })
                 creditsApplied: Number(orderData.credits_applied || 0),
                 tax: Number(orderData.tax),
                 total: Number(orderData.total),
-                orderId: order.id
+                orderId: order.id,
               });
             }
           }
@@ -841,11 +874,13 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     const amountPaise = Math.round(Number(order.total) * 100);
     if (amountPaise < 100) throw new Error("Amount must be at least ₹1.00");
 
-    const keyId = process.env['VITE_RAZORPAY_KEY_ID'] || process.env['RAZORPAY_KEY_ID'];
-    const keySecret = process.env['RAZORPAY_KEY_SECRET'];
+    const keyId = process.env["VITE_RAZORPAY_KEY_ID"] || process.env["RAZORPAY_KEY_ID"];
+    const keySecret = process.env["RAZORPAY_KEY_SECRET"];
 
     if (!keyId || !keySecret) {
-      throw new Error(`Missing Razorpay API Keys in backend. ID present: ${!!keyId}, Secret present: ${!!keySecret}. Please restart your dev server.`);
+      throw new Error(
+        `Missing Razorpay API Keys in backend. ID present: ${!!keyId}, Secret present: ${!!keySecret}. Please restart your dev server.`,
+      );
     }
 
     const razorpay = new Razorpay({
@@ -857,7 +892,7 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
       amount: amountPaise,
       currency: "INR",
       // Razorpay receipt limit is 40 chars. UUID is 36 chars.
-      receipt: `rcpt_${order.id.split('-')[0]}`,
+      receipt: `rcpt_${order.id.split("-")[0]}`,
     };
 
     try {
@@ -894,7 +929,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       const body = data.razorpay_order_id + "|" + data.razorpay_payment_id;
       const crypto = await import("crypto");
       const expectedSignature = crypto
-        .createHmac("sha256", process.env['RAZORPAY_KEY_SECRET'] as string)
+        .createHmac("sha256", process.env["RAZORPAY_KEY_SECRET"] as string)
         .update(body.toString())
         .digest("hex");
 
@@ -902,7 +937,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
         throw new Error("Invalid signature. Payment verification failed.");
       }
     } catch (e) {
-      console.error('Signature verification failed:', e);
+      console.error("Signature verification failed:", e);
       throw e;
     }
 
@@ -912,13 +947,21 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       // Fetch the updated order to get the final credits_applied
       const { data: updatedOrder } = await supabaseAdmin
         .from("orders")
-        .select("credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))")
+        .select(
+          "credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))",
+        )
         .eq("id", order.id)
         .single();
       const earnedPoints = updatedOrder?.points_redeemed ?? 0;
       if (updatedOrder && earnedPoints > 0 && updatedOrder.user_id) {
         const { deductWallet } = await import("./wallet.server");
-        await deductWallet(updatedOrder.user_id, earnedPoints, "Redeemed on order", order.id, (updatedOrder as any).sessions.tables.restaurant_id);
+        await deductWallet(
+          updatedOrder.user_id,
+          earnedPoints,
+          "Redeemed on order",
+          order.id,
+          (updatedOrder as any).sessions.tables.restaurant_id,
+        );
       }
 
       const { error } = await supabaseAdmin
@@ -934,59 +977,62 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
         .eq("id", order.session_id);
       if (sessionError) throw sessionError;
     } catch (e) {
-      console.error('Updating order status failed:', e);
+      console.error("Updating order status failed:", e);
       throw e;
     }
 
     try {
       const { sendNewOrderNotification, sendGuestReceiptEmail } = await import("./email.server");
-      
+
       const { data: tableData } = await supabaseAdmin
         .from("tables")
         .select("label, restaurant_id")
         .eq("id", tableId)
         .single();
-        
+
       if (tableData) {
-          const restData = await supabaseAdmin
-            .from("restaurants")
-            .select("name, owner_id")
-            .eq("id", tableData.restaurant_id)
-            .single()
-            .then(r => r.data as { name: string; owner_id: string | null } | null);
-          
+        const restData = await supabaseAdmin
+          .from("restaurants")
+          .select("name, owner_id")
+          .eq("id", tableData.restaurant_id)
+          .single()
+          .then((r) => r.data as { name: string; owner_id: string | null } | null);
+
         if (restData) {
-          let ownerEmail = process.env['RESTAURANT_NOTIFICATION_EMAIL'];
-          
+          let ownerEmail = process.env["RESTAURANT_NOTIFICATION_EMAIL"];
+
           if (restData.owner_id) {
-            const { data: { user: ownerUser }, error: userError } = await supabaseAdmin.auth.admin.getUserById(restData.owner_id);
-            if (userError) console.error('getUserById error:', userError);
+            const {
+              data: { user: ownerUser },
+              error: userError,
+            } = await supabaseAdmin.auth.admin.getUserById(restData.owner_id);
+            if (userError) console.error("getUserById error:", userError);
             if (ownerUser?.email) {
               ownerEmail = ownerUser.email;
             }
           }
-          
+
           if (ownerEmail) {
             const { data: items } = await supabaseAdmin
               .from("order_items")
               .select("qty, customizations, menu_items(name)")
               .eq("order_id", order.id);
-              
+
             const formattedItems = (items || []).map((i: any) => ({
               name: i.menu_items?.name || "Unknown Item",
               qty: i.qty,
-              customizations: i.customizations
+              customizations: i.customizations,
             }));
-            
+
             await sendNewOrderNotification({
-              restaurantName: restData.name || 'Restaurant',
-              tableName: tableData.label || 'Table',
+              restaurantName: restData.name || "Restaurant",
+              tableName: tableData.label || "Table",
               orderItems: formattedItems,
               subtotal: Number(order.subtotal || 0),
               discount: Number(order.discount_amount || 0),
               total: Number(order.total || 0),
               ownerEmail,
-              orderId: order.id
+              orderId: order.id,
             });
 
             if (data.guestEmail) {
@@ -1002,14 +1048,14 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
                 creditsApplied: Number(order.credits_applied || 0),
                 tax: Number(order.tax || 0),
                 total: Number(order.total || 0),
-                orderId: order.id
+                orderId: order.id,
               });
             }
           }
         }
       }
     } catch (e) {
-      console.error('Email fetching/sending failed:', e);
+      console.error("Email fetching/sending failed:", e);
       throw e;
     }
 

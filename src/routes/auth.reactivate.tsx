@@ -13,7 +13,10 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/auth/reactivate")({
   ssr: false,
   beforeLoad: async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     if (error || !session) {
       throw redirect({ to: "/auth/login" });
     }
@@ -33,7 +36,7 @@ function ReactivatePage() {
   const navigate = useNavigate();
   const { session, restaurant } = Route.useRouteContext();
   const token = session.access_token;
-  
+
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [code, setCode] = useState("");
@@ -67,8 +70,8 @@ function ReactivatePage() {
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-lift">
         <h1 className="font-display text-2xl text-foreground mb-2">Reactivate Account</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Welcome back to <strong>{restaurant.name}</strong>! 
-          We've sent a 6-digit code to your email to confirm your reactivation.
+          Welcome back to <strong>{restaurant.name}</strong>! We've sent a 6-digit code to your
+          email to confirm your reactivation.
         </p>
 
         {otpSent ? (
@@ -91,9 +94,9 @@ function ReactivatePage() {
             </Button>
           </form>
         ) : (
-          <Button 
-            className="w-full" 
-            size="lg" 
+          <Button
+            className="w-full"
+            size="lg"
             disabled={sendingOtp}
             onClick={async () => {
               setSendingOtp(true);
@@ -112,12 +115,12 @@ function ReactivatePage() {
             Send verification code
           </Button>
         )}
-        
+
         {otpSent && (
           <div className="mt-6 text-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               disabled={sendingOtp}
               onClick={async () => {
                 setSendingOtp(true);
@@ -136,11 +139,11 @@ function ReactivatePage() {
             </Button>
           </div>
         )}
-        
+
         <div className="mt-2 text-center">
-          <Button 
-            variant="link" 
-            size="sm" 
+          <Button
+            variant="link"
+            size="sm"
             className="text-muted-foreground"
             onClick={() => {
               supabase.auth.signOut();

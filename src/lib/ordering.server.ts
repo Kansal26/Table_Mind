@@ -33,7 +33,10 @@ export async function requireSessionScope(qrToken: string): Promise<SessionScope
     .select("id")
     .eq("table_id", table.id)
     .eq("status", "open")
-    .gte("last_activity_at", new Date(Date.now() - SESSION_INACTIVITY_MINUTES * 60 * 1000).toISOString())
+    .gte(
+      "last_activity_at",
+      new Date(Date.now() - SESSION_INACTIVITY_MINUTES * 60 * 1000).toISOString(),
+    )
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -95,7 +98,9 @@ export async function resolveTableId(qrToken: string): Promise<string | null> {
 export async function requireOwnedOrder(tableId: string, orderId: string) {
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("id, status, subtotal, tax, discount_amount, credits_applied, use_credits, total, session_id, user_id, sessions!inner(table_id)")
+    .select(
+      "id, status, subtotal, tax, discount_amount, credits_applied, use_credits, total, session_id, user_id, sessions!inner(table_id)",
+    )
     .eq("id", orderId)
     .eq("sessions.table_id", tableId)
     .maybeSingle();
@@ -154,10 +159,13 @@ export async function recalcTotals(orderId: string) {
       // User explicitly selected "No offer applied"
       appliedDiscount = 0;
     } else {
-      const stillEligible = eligibleCoupons.find(c => c.id === currentDiscount.coupon_id);
+      const stillEligible = eligibleCoupons.find((c) => c.id === currentDiscount.coupon_id);
       if (stillEligible) {
         appliedDiscount = stillEligible.calculated_discount;
-        await supabaseAdmin.from("order_discounts").update({ discount_amount: appliedDiscount }).eq("id", currentDiscount.id);
+        await supabaseAdmin
+          .from("order_discounts")
+          .update({ discount_amount: appliedDiscount })
+          .eq("id", currentDiscount.id);
       } else {
         await supabaseAdmin.from("order_discounts").delete().eq("id", currentDiscount.id);
       }
@@ -170,7 +178,7 @@ export async function recalcTotals(orderId: string) {
       await supabaseAdmin.from("order_discounts").insert({
         order_id: orderId,
         coupon_id: best.id,
-        discount_amount: appliedDiscount
+        discount_amount: appliedDiscount,
       });
     }
   }
@@ -189,11 +197,11 @@ export async function recalcTotals(orderId: string) {
 
   let creditsApplied = 0;
   let finalPointsRedeemed = order?.points_redeemed || 0;
-  
+
   if (order?.points_redeemed && order.points_redeemed > 0 && order?.user_id) {
     const { getWalletBalance } = await import("./wallet.server");
     const balance = await getWalletBalance(order.user_id!, restaurantId!);
-    
+
     // Read loyalty settings
     const { data: settings } = await supabaseAdmin
       .from("loyalty_settings")
@@ -204,26 +212,26 @@ export async function recalcTotals(orderId: string) {
     const pointsPerRupee = settings?.points_per_rupee || 0;
     const minOrderVal = settings?.min_order_value_to_redeem || 0;
     const maxRedeemable = settings?.max_points_redeemable_per_order || 0;
-    
+
     // Check min order value
-    if (minOrderVal > 0 && (subtotal - appliedDiscount) < minOrderVal) {
+    if (minOrderVal > 0 && subtotal - appliedDiscount < minOrderVal) {
       finalPointsRedeemed = 0;
     } else {
       // Ensure they don't redeem more points than they have
       finalPointsRedeemed = Math.min(order.points_redeemed, balance);
-      
+
       // Enforce max points limit
       if (maxRedeemable > 0) {
         finalPointsRedeemed = Math.min(finalPointsRedeemed, maxRedeemable);
       }
-      
+
       // Enforce bill total limit (don't burn points beyond bill total)
       const maxCredits = Math.max(0, subtotal - appliedDiscount);
       if (pointsPerRupee > 0) {
         const pointsNeededForFree = Math.ceil(maxCredits / pointsPerRupee);
         finalPointsRedeemed = Math.min(finalPointsRedeemed, pointsNeededForFree);
       }
-      
+
       // Calculate ₹ discount
       const calculatedDiscount = finalPointsRedeemed * pointsPerRupee;
       creditsApplied = Math.min(calculatedDiscount, maxCredits);
@@ -233,10 +241,17 @@ export async function recalcTotals(orderId: string) {
   const taxableAmount = Math.max(0, subtotal - appliedDiscount - creditsApplied);
   const tax = Math.round(taxableAmount * TAX_RATE * 100) / 100;
   const total = Math.max(0, Math.round((taxableAmount + tax) * 100) / 100);
-  
+
   const { error } = await supabaseAdmin
     .from("orders")
-    .update({ subtotal, tax, discount_amount: appliedDiscount, credits_applied: creditsApplied, total, points_redeemed: finalPointsRedeemed })
+    .update({
+      subtotal,
+      tax,
+      discount_amount: appliedDiscount,
+      credits_applied: creditsApplied,
+      total,
+      points_redeemed: finalPointsRedeemed,
+    })
     .eq("id", orderId);
   if (error) throw error;
 }
@@ -244,7 +259,9 @@ export async function recalcTotals(orderId: string) {
 export async function findCartOrder(sessionId: string) {
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("id, status, subtotal, tax, discount_amount, credits_applied, use_credits, total, user_id")
+    .select(
+      "id, status, subtotal, tax, discount_amount, credits_applied, use_credits, total, user_id",
+    )
     .eq("session_id", sessionId)
     .eq("status", "cart")
     .order("created_at", { ascending: false })

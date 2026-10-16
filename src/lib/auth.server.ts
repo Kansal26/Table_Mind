@@ -10,7 +10,7 @@ export async function verifyAdminAuth(token: string | undefined | null) {
   }
 
   const { data, error } = await supabaseAdmin.auth.getUser(token);
-  
+
   if (error || !data.user) {
     throw new Error("401: Unauthorized. Invalid or expired token.");
   }
@@ -23,7 +23,10 @@ export async function verifyAdminAuth(token: string | undefined | null) {
  * of the specified restaurant. Throws a 403 Error if not.
  * Returns the verified user object.
  */
-export async function requireRestaurantOwnership(token: string | undefined | null, restaurantId: string) {
+export async function requireRestaurantOwnership(
+  token: string | undefined | null,
+  restaurantId: string,
+) {
   const user = await verifyAdminAuth(token);
 
   const { data: restaurant, error } = await supabaseAdmin

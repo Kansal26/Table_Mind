@@ -1,7 +1,7 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 // Only initialize if the API key is present
-const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_API_KEY']) : null;
+const resend = process.env["RESEND_API_KEY"] ? new Resend(process.env["RESEND_API_KEY"]) : null;
 
 interface OrderItem {
   name: string;
@@ -13,7 +13,11 @@ export function emailLayout({
   previewText,
   accentColor = "#C9622A",
   bodyHtml,
-}: { previewText: string; accentColor?: string; bodyHtml: string }) {
+}: {
+  previewText: string;
+  accentColor?: string;
+  bodyHtml: string;
+}) {
   return `
 <!DOCTYPE html>
 <html>
@@ -68,21 +72,33 @@ export function emailButton(href: string, label: string, color = "#1A2E4A") {
 }
 
 export function billBreakdownHtml({
-  items, subtotal, discount, creditsApplied, tax, total,
+  items,
+  subtotal,
+  discount,
+  creditsApplied,
+  tax,
+  total,
 }: {
   items: { name: string; qty: number; customizations?: string | null }[];
-  subtotal: number; discount?: number; creditsApplied?: number;
-  tax: number; total: number;
+  subtotal: number;
+  discount?: number;
+  creditsApplied?: number;
+  tax: number;
+  total: number;
 }) {
   const money = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
 
-  const itemRows = items.map(i => `
+  const itemRows = items
+    .map(
+      (i) => `
     <tr>
       <td style="padding:6px 0; font-size:14px; color:#1A2E4A;">
         ${i.qty}× ${i.name}${i.customizations ? `<br/><span style="font-size:12px; color:#8A94A6;">${i.customizations}</span>` : ""}
       </td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 
   const row = (label: string, value: string, opts?: { bold?: boolean; color?: string }) => `
     <tr>
@@ -105,8 +121,18 @@ export function billBreakdownHtml({
 }
 
 export function otpEmailHtml({
-  heading, message, code, accentColor, warningText,
-}: { heading: string; message: string; code: string; accentColor: string; warningText?: string }) {
+  heading,
+  message,
+  code,
+  accentColor,
+  warningText,
+}: {
+  heading: string;
+  message: string;
+  code: string;
+  accentColor: string;
+  warningText?: string;
+}) {
   return `
 <h1 style="margin:0 0 8px; font-size:20px; color:#1A2E4A;">${heading}</h1>
 <p style="margin:0 0 24px; font-size:14px; color:#5A6472; line-height:1.6;">
@@ -122,10 +148,14 @@ export function otpEmailHtml({
 <p style="margin:16px 0 0; font-size:12px; color:#8A94A6;">
   This code expires in 10 minutes. Never share it with anyone.
 </p>
-${warningText ? `
+${
+  warningText
+    ? `
 <div style="margin-top:20px; padding:14px 16px; background-color:#FDF1EE; border-left:3px solid #C0392B; border-radius:4px;">
   <p style="margin:0; font-size:13px; color:#9C3421; line-height:1.5;">${warningText}</p>
-</div>` : ""}
+</div>`
+    : ""
+}
 `;
 }
 
@@ -139,7 +169,8 @@ export async function sendNewOrderNotification(params: {
   ownerEmail: string;
   orderId: string;
 }) {
-  const { restaurantName, tableName, orderItems, subtotal, discount, total, ownerEmail, orderId } = params;
+  const { restaurantName, tableName, orderItems, subtotal, discount, total, ownerEmail, orderId } =
+    params;
 
   if (!resend) {
     console.warn("sendNewOrderNotification: RESEND_API_KEY not set. Email not sent.");
@@ -153,23 +184,23 @@ export async function sendNewOrderNotification(params: {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short"
+    timeZoneName: "short",
   });
 
-  const items = orderItems.map(item => {
+  const items = orderItems.map((item) => {
     let customText = "";
-    if (item.customizations && typeof item.customizations === 'object') {
+    if (item.customizations && typeof item.customizations === "object") {
       const keys = Object.keys(item.customizations);
       if (keys.length > 0) {
-         customText = keys.map(k => item.customizations[k]).join(', ');
+        customText = keys.map((k) => item.customizations[k]).join(", ");
       }
-    } else if (typeof item.customizations === 'string') {
-       customText = item.customizations;
+    } else if (typeof item.customizations === "string") {
+      customText = item.customizations;
     }
     return { name: item.name, qty: item.qty, customizations: customText || null };
   });
 
-  const dashboardUrl = `${process.env['VITE_APP_URL'] || process.env['PUBLIC_URL'] || "http://localhost:5173"}/admin/dashboard`;
+  const dashboardUrl = `${process.env["VITE_APP_URL"] || process.env["PUBLIC_URL"] || "http://localhost:5173"}/admin/dashboard`;
 
   const bodyHtml = `
 <h1 style="margin:0 0 4px; font-size:20px; color:#1A2E4A;">New order received</h1>
@@ -186,15 +217,15 @@ ${emailButton(dashboardUrl, "View on dashboard")}
   const html = emailLayout({
     previewText: `New order from ${tableName}`,
     accentColor: "#C9622A",
-    bodyHtml
+    bodyHtml,
   });
 
   try {
     const data = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: "onboarding@resend.dev",
       to: ownerEmail,
       subject: `New order — ${tableName} at ${restaurantName}`,
-      html: html
+      html: html,
     });
     console.log("Email sent successfully:", data);
     return data;
@@ -216,7 +247,18 @@ export async function sendGuestReceiptEmail(params: {
   total: number;
   orderId: string;
 }) {
-  const { guestEmail, restaurantName, tableName, orderItems, subtotal, discount, creditsApplied, tax, total, orderId } = params;
+  const {
+    guestEmail,
+    restaurantName,
+    tableName,
+    orderItems,
+    subtotal,
+    discount,
+    creditsApplied,
+    tax,
+    total,
+    orderId,
+  } = params;
 
   if (!resend) {
     console.warn("sendGuestReceiptEmail: RESEND_API_KEY not set. Email not sent.");
@@ -230,18 +272,18 @@ export async function sendGuestReceiptEmail(params: {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short"
+    timeZoneName: "short",
   });
 
-  const items = orderItems.map(item => {
+  const items = orderItems.map((item) => {
     let customText = "";
-    if (item.customizations && typeof item.customizations === 'object') {
+    if (item.customizations && typeof item.customizations === "object") {
       const keys = Object.keys(item.customizations);
       if (keys.length > 0) {
-         customText = keys.map(k => item.customizations[k]).join(', ');
+        customText = keys.map((k) => item.customizations[k]).join(", ");
       }
-    } else if (typeof item.customizations === 'string') {
-       customText = item.customizations;
+    } else if (typeof item.customizations === "string") {
+      customText = item.customizations;
     }
     return { name: item.name, qty: item.qty, customizations: customText || null };
   });
@@ -263,12 +305,12 @@ ${billBreakdownHtml({ items, subtotal, discount, creditsApplied, tax, total })}
   const html = emailLayout({
     previewText: `Your receipt from ${restaurantName}`,
     accentColor: "#C9622A",
-    bodyHtml
+    bodyHtml,
   });
 
   try {
     await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: "onboarding@resend.dev",
       to: guestEmail,
       subject: `Your receipt from ${restaurantName}`,
       html,
@@ -290,7 +332,8 @@ export async function sendRestaurantWelcomeEmail(params: {
     return null;
   }
 
-  const baseUrl = process.env['VITE_APP_URL'] || process.env['PUBLIC_URL'] || "http://localhost:5173";
+  const baseUrl =
+    process.env["VITE_APP_URL"] || process.env["PUBLIC_URL"] || "http://localhost:5173";
   const dashboardUrl = `${baseUrl}/admin/dashboard`;
 
   const bodyHtml = `
@@ -300,13 +343,22 @@ export async function sendRestaurantWelcomeEmail(params: {
   to get your first order flowing:
 </p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
-  ${["Add your menu items", "Generate QR codes for your tables", "Customize your branding (logo, banner)", "Set up coupons (optional)", "Configure your loyalty points program (optional)"]
-    .map(step => `
+  ${[
+    "Add your menu items",
+    "Generate QR codes for your tables",
+    "Customize your branding (logo, banner)",
+    "Set up coupons (optional)",
+    "Configure your loyalty points program (optional)",
+  ]
+    .map(
+      (step) => `
     <tr>
       <td style="padding:8px 0; font-size:14px; color:#1A2E4A; border-bottom:1px solid #F5EFE6;">
         <span style="color:#C9622A; margin-right:8px; font-weight:700;">—</span>${step}
       </td>
-    </tr>`).join("")}
+    </tr>`,
+    )
+    .join("")}
 </table>
 ${emailButton(dashboardUrl, "Go to your dashboard")}
 `;
@@ -314,23 +366,22 @@ ${emailButton(dashboardUrl, "Go to your dashboard")}
   const html = emailLayout({
     previewText: `Welcome to TableMind, ${restaurantName}!`,
     accentColor: "#C9622A",
-    bodyHtml
+    bodyHtml,
   });
 
   try {
-    console.log('[WELCOME EMAIL] Calling Resend API...')
+    console.log("[WELCOME EMAIL] Calling Resend API...");
     const data = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: "onboarding@resend.dev",
       to: ownerEmail,
       subject: `Welcome to TableMind, ${restaurantName}`,
-      html: html
+      html: html,
     });
-    console.log('[WELCOME EMAIL] Resend response:', JSON.stringify(data))
+    console.log("[WELCOME EMAIL] Resend response:", JSON.stringify(data));
     console.log("Welcome email sent successfully:", data);
     return data;
   } catch (error) {
-    console.error('[WELCOME EMAIL] FAILED:', error);
+    console.error("[WELCOME EMAIL] FAILED:", error);
     return null;
   }
 }
-

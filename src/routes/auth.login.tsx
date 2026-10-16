@@ -13,9 +13,9 @@ type LoginSearch = { redirect?: string; table?: string; order?: string };
 export const Route = createFileRoute("/auth/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => {
     const s: LoginSearch = {};
-    if (search['redirect']) s.redirect = String(search['redirect']);
-    if (search['table']) s.table = String(search['table']);
-    if (search['order']) s.order = String(search['order']);
+    if (search["redirect"]) s.redirect = String(search["redirect"]);
+    if (search["table"]) s.table = String(search["table"]);
+    if (search["order"]) s.order = String(search["order"]);
     return s;
   },
   head: () => ({
@@ -40,8 +40,9 @@ function LoginPage() {
 
   async function handleGoogleSignIn() {
     setError(null);
-    const safeRedirect = search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
-    const redirectQuery = safeRedirect ? `?redirect=${encodeURIComponent(safeRedirect)}` : '';
+    const safeRedirect =
+      search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+    const redirectQuery = safeRedirect ? `?redirect=${encodeURIComponent(safeRedirect)}` : "";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -85,13 +86,18 @@ function LoginPage() {
       if (signInError) {
         setError(signInError.message);
       } else {
-        const safeRedirect = search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+        const safeRedirect =
+          search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
         if (safeRedirect) {
           navigate({ to: safeRedirect as any, search });
         } else {
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           if (session) {
-            const restaurant = await getOwnerRestaurantFn({ data: { token: session.access_token } });
+            const restaurant = await getOwnerRestaurantFn({
+              data: { token: session.access_token },
+            });
             if (restaurant) {
               if (restaurant.deactivated_at) {
                 navigate({ to: "/auth/reactivate" as any });
@@ -112,7 +118,9 @@ function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-5">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-lift">
-        <h1 className="font-display text-2xl text-foreground">{isSignUp ? "Create an account" : "Sign in"}</h1>
+        <h1 className="font-display text-2xl text-foreground">
+          {isSignUp ? "Create an account" : "Sign in"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Saving your dietary profile and order history makes future visits seamless.
         </p>

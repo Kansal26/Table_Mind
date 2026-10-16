@@ -42,9 +42,9 @@ export const deleteAccountFn = createServerFn({ method: "POST" })
 
     // Call the Postgres RPC function to atomically delete all restaurant data
     const { error: rpcError } = await supabaseAdmin.rpc("delete_restaurant_account", {
-      owner_id_param: user.id
+      owner_id_param: user.id,
     });
-    
+
     if (rpcError) {
       console.error("[deleteAccountFn] RPC Error:", rpcError);
       throw new Error(`Database Error: ${rpcError.message}`);
@@ -53,9 +53,12 @@ export const deleteAccountFn = createServerFn({ method: "POST" })
     // Delete user from auth.users via Supabase Admin API
     const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteUserError) {
-      console.warn("[deleteAccountFn] Supabase Auth threw an error, but account was likely deleted:", deleteUserError);
+      console.warn(
+        "[deleteAccountFn] Supabase Auth threw an error, but account was likely deleted:",
+        deleteUserError,
+      );
       // We don't throw here because GoTrue sometimes throws 500 / AuthRetryableFetchError
-      // even when the user is successfully deleted. Since the RPC already succeeded, 
+      // even when the user is successfully deleted. Since the RPC already succeeded,
       // the restaurant data is completely gone.
     }
 

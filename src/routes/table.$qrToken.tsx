@@ -43,7 +43,10 @@ export const Route = createFileRoute("/table/$qrToken")({
       { name: "description", content: "Browse the menu and order straight from your table." },
       { name: "robots", content: "noindex" },
       { property: "og:title", content: "Order at your table — TableMind" },
-      { property: "og:description", content: "Browse the menu and order straight from your table." },
+      {
+        property: "og:description",
+        content: "Browse the menu and order straight from your table.",
+      },
     ],
   }),
   component: TableMenuPage,
@@ -53,12 +56,19 @@ function TagRow({ item }: { item: MenuItem }) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
       {item.dietary_tags?.map((tag) => (
-        <Badge key={tag} variant="secondary" className="bg-olive/15 text-[10px] uppercase tracking-wide text-foreground">
+        <Badge
+          key={tag}
+          variant="secondary"
+          className="bg-olive/15 text-[10px] uppercase tracking-wide text-foreground"
+        >
           {tag}
         </Badge>
       ))}
       {item.allergens && item.allergens.length > 0 && (
-        <Badge variant="outline" className="border-primary/40 text-[10px] uppercase tracking-wide text-primary">
+        <Badge
+          variant="outline"
+          className="border-primary/40 text-[10px] uppercase tracking-wide text-primary"
+        >
           contains {item.allergens.join(", ")}
         </Badge>
       )}
@@ -68,14 +78,16 @@ function TagRow({ item }: { item: MenuItem }) {
 
 function getConflicts(item: MenuItem, profile: Profile | undefined | null) {
   if (!profile) return { allergenConflicts: [], dietaryMismatch: null };
-  
-  const allergenConflicts = (item.allergens || []).filter(a => (profile.allergens || []).includes(a));
-  
+
+  const allergenConflicts = (item.allergens || []).filter((a) =>
+    (profile.allergens || []).includes(a),
+  );
+
   let dietaryMismatch: string | null = null;
   if (profile.dietary_tags?.length > 0) {
     const userPref = profile.dietary_tags[0]?.toLowerCase();
-    const itemTags = (item.dietary_tags || []).map(t => t.toLowerCase());
-    
+    const itemTags = (item.dietary_tags || []).map((t) => t.toLowerCase());
+
     if (userPref === "veg") {
       if (!itemTags.includes("vegetarian") && !itemTags.includes("vegan")) {
         dietaryMismatch = "Non-Veg";
@@ -108,14 +120,16 @@ function MenuItemCard({
 }) {
   const conflicts = getConflicts(item, profile);
   const hasAllergy = conflicts.allergenConflicts.length > 0;
-  
+
   return (
     <button
       type="button"
       disabled={!item.available}
       onClick={onClick}
       className={`flex ${isRec ? "w-64 shrink-0 flex-col gap-3 snap-start" : "w-full gap-4"} rounded-xl border bg-card p-3 text-left shadow-soft transition-colors hover:bg-accent/40 disabled:opacity-55 ${
-        hasAllergy ? "border-l-4 border-l-destructive/70 border-y-border border-r-border" : "border-border"
+        hasAllergy
+          ? "border-l-4 border-l-destructive/70 border-y-border border-r-border"
+          : "border-border"
       }`}
     >
       {!isRec ? (
@@ -136,7 +150,10 @@ function MenuItemCard({
                 </Badge>
               )}
               {conflicts.dietaryMismatch && (
-                <Badge variant="secondary" className="bg-muted text-muted-foreground text-[10px] uppercase tracking-wide">
+                <Badge
+                  variant="secondary"
+                  className="bg-muted text-muted-foreground text-[10px] uppercase tracking-wide"
+                >
                   {conflicts.dietaryMismatch}
                 </Badge>
               )}
@@ -145,9 +162,16 @@ function MenuItemCard({
           </div>
           {item.image_url && (
             <div className="relative shrink-0">
-              <img src={item.image_url} alt={item.name} loading="lazy" className="size-20 rounded-lg object-cover" />
+              <img
+                src={item.image_url}
+                alt={item.name}
+                loading="lazy"
+                className="size-20 rounded-lg object-cover"
+              />
               {item.badge && (
-                <Badge className={`absolute -top-2 -right-2 text-[9px] uppercase tracking-wider ${item.badge === 'new' ? 'bg-green-500' : item.badge === 'chefs_special' ? 'bg-purple-500' : 'bg-orange-500'}`}>
+                <Badge
+                  className={`absolute -top-2 -right-2 text-[9px] uppercase tracking-wider ${item.badge === "new" ? "bg-green-500" : item.badge === "chefs_special" ? "bg-purple-500" : "bg-orange-500"}`}
+                >
                   {item.badge.replace("_", " ")}
                 </Badge>
               )}
@@ -158,9 +182,16 @@ function MenuItemCard({
         <>
           {item.image_url && (
             <div className="relative">
-              <img src={item.image_url} alt={item.name} loading="lazy" className="h-32 w-full rounded-lg object-cover" />
+              <img
+                src={item.image_url}
+                alt={item.name}
+                loading="lazy"
+                className="h-32 w-full rounded-lg object-cover"
+              />
               {item.badge && (
-                <Badge className={`absolute top-2 right-2 text-[9px] uppercase tracking-wider ${item.badge === 'new' ? 'bg-green-500' : item.badge === 'chefs_special' ? 'bg-purple-500' : 'bg-orange-500'}`}>
+                <Badge
+                  className={`absolute top-2 right-2 text-[9px] uppercase tracking-wider ${item.badge === "new" ? "bg-green-500" : item.badge === "chefs_special" ? "bg-purple-500" : "bg-orange-500"}`}
+                >
                   {item.badge.replace("_", " ")}
                 </Badge>
               )}
@@ -171,7 +202,9 @@ function MenuItemCard({
               <span className="font-medium text-foreground text-left">{item.name}</span>
               <span className="shrink-0 text-sm text-muted-foreground">{money(item.price)}</span>
             </div>
-            <p className="mt-1 text-xs text-primary font-medium text-left">{(item as RecommendedItem)._reason}</p>
+            <p className="mt-1 text-xs text-primary font-medium text-left">
+              {(item as RecommendedItem)._reason}
+            </p>
             <div className="flex flex-wrap gap-1 mt-2">
               {conflicts.allergenConflicts.length > 0 && (
                 <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
@@ -179,12 +212,17 @@ function MenuItemCard({
                 </Badge>
               )}
               {conflicts.dietaryMismatch && (
-                <Badge variant="secondary" className="bg-muted text-muted-foreground text-[10px] uppercase tracking-wide">
+                <Badge
+                  variant="secondary"
+                  className="bg-muted text-muted-foreground text-[10px] uppercase tracking-wide"
+                >
                   {conflicts.dietaryMismatch}
                 </Badge>
               )}
             </div>
-            <div className="text-left w-full"><TagRow item={item} /></div>
+            <div className="text-left w-full">
+              <TagRow item={item} />
+            </div>
           </div>
         </>
       )}
@@ -195,7 +233,9 @@ function MenuItemCard({
 function CallWaiterButton({ qrToken }: { qrToken: string }) {
   const [open, setOpen] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [callId, setCallId] = useState<string | null>(() => localStorage.getItem(`waiter_call_id_${qrToken}`));
+  const [callId, setCallId] = useState<string | null>(() =>
+    localStorage.getItem(`waiter_call_id_${qrToken}`),
+  );
 
   useEffect(() => {
     const last = localStorage.getItem(`waiter_${qrToken}`);
@@ -213,7 +253,7 @@ function CallWaiterButton({ qrToken }: { qrToken: string }) {
 
   useEffect(() => {
     if (cooldown > 0) {
-      const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+      const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
       return () => clearInterval(timer);
     }
     return undefined;
@@ -221,16 +261,21 @@ function CallWaiterButton({ qrToken }: { qrToken: string }) {
 
   useEffect(() => {
     if (!callId) return;
-    const channel = supabase.channel(`waiter_call_${callId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `id=eq.${callId}` }, (payload: any) => {
-        if (payload.new.status === 'resolved') {
-          setCooldown(0);
-          setCallId(null);
-          localStorage.removeItem(`waiter_${qrToken}`);
-          localStorage.removeItem(`waiter_call_id_${qrToken}`);
-          toast.success("Waiter has arrived! 👋");
-        }
-      })
+    const channel = supabase
+      .channel(`waiter_call_${callId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "waiter_calls", filter: `id=eq.${callId}` },
+        (payload: any) => {
+          if (payload.new.status === "resolved") {
+            setCooldown(0);
+            setCallId(null);
+            localStorage.removeItem(`waiter_${qrToken}`);
+            localStorage.removeItem(`waiter_call_id_${qrToken}`);
+            toast.success("Waiter has arrived! 👋");
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -261,16 +306,18 @@ function CallWaiterButton({ qrToken }: { qrToken: string }) {
   return (
     <>
       <div className="fixed bottom-44 right-4 z-40">
-        <Button 
-          size="icon" 
-          className="h-14 w-14 rounded-full shadow-lg" 
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-lg"
           disabled={cooldown > 0}
           onClick={() => setOpen(true)}
         >
           {cooldown > 0 ? (
             <div className="flex flex-col items-center justify-center">
               <span className="text-[10px] uppercase font-bold leading-none">Called</span>
-              <span className="text-xs font-bold">{Math.floor(cooldown/60)}:{(cooldown%60).toString().padStart(2, '0')}</span>
+              <span className="text-xs font-bold">
+                {Math.floor(cooldown / 60)}:{(cooldown % 60).toString().padStart(2, "0")}
+              </span>
             </div>
           ) : (
             <Bell size={24} />
@@ -284,9 +331,15 @@ function CallWaiterButton({ qrToken }: { qrToken: string }) {
             <SheetTitle>Call Waiter</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-3 mt-6">
-            <Button variant="outline" onClick={() => handleCall('Need assistance')}>Need assistance</Button>
-            <Button variant="outline" onClick={() => handleCall('Request the bill')}>Request the bill</Button>
-            <Button variant="outline" onClick={() => handleCall('Other')}>Other</Button>
+            <Button variant="outline" onClick={() => handleCall("Need assistance")}>
+              Need assistance
+            </Button>
+            <Button variant="outline" onClick={() => handleCall("Request the bill")}>
+              Request the bill
+            </Button>
+            <Button variant="outline" onClick={() => handleCall("Other")}>
+              Other
+            </Button>
           </div>
         </SheetContent>
       </Sheet>
@@ -314,10 +367,15 @@ function TableMenuPage() {
   const [notes, setNotes] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [showOnlySafe, setShowOnlySafe] = useState(false);
-  const [allergyWarning, setAllergyWarning] = useState<{ menuItemId: string, qty: number, notes: string, message: string } | null>(null);
+  const [allergyWarning, setAllergyWarning] = useState<{
+    menuItemId: string;
+    qty: number;
+    notes: string;
+    message: string;
+  } | null>(null);
   const resolveAllergyRef = useRef<((added: boolean) => void) | null>(null);
   const { user } = useAuth();
-  
+
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: () => fetchMyProfile(user!.id),
@@ -349,7 +407,10 @@ function TableMenuPage() {
     queryKey: ["participants", qrToken, ctx?.sessionId],
     queryFn: async () => {
       if (!ctx?.sessionId) return [];
-      const { data, error } = await supabase.from("session_participants" as any).select("*").eq("session_id", ctx.sessionId);
+      const { data, error } = await supabase
+        .from("session_participants" as any)
+        .select("*")
+        .eq("session_id", ctx.sessionId);
       if (error) throw error;
       return data;
     },
@@ -385,7 +446,7 @@ function TableMenuPage() {
               toast(`${newItem.added_by_name} added an item`);
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -401,7 +462,7 @@ function TableMenuPage() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["participants", qrToken, ctx.sessionId] });
-        }
+        },
       )
       .subscribe();
 
@@ -421,7 +482,7 @@ function TableMenuPage() {
             toast.success("Order has been paid!");
             queryClient.invalidateQueries({ queryKey: ["cart", qrToken] });
           }
-        }
+        },
       )
       .subscribe();
 
@@ -442,8 +503,12 @@ function TableMenuPage() {
     queryClient.invalidateQueries({ queryKey: ["cart", qrToken, ctx?.sessionId] });
 
   const addMutation = useMutation({
-    mutationFn: (input: { menuItemId: string; qty: number; notes: string; allergyOverrideAck?: boolean }) =>
-      addToCart({ qrToken, ...input, deviceToken: deviceToken || "" }),
+    mutationFn: (input: {
+      menuItemId: string;
+      qty: number;
+      notes: string;
+      allergyOverrideAck?: boolean;
+    }) => addToCart({ qrToken, ...input, deviceToken: deviceToken || "" }),
     onSuccess: async (data, variables) => {
       if (data.requiresAllergyAck) {
         setAllergyWarning({ ...variables, message: data.message || "Allergy warning" });
@@ -541,14 +606,24 @@ function TableMenuPage() {
     <main className="min-h-screen bg-background pb-28">
       {ctx.restaurantBanner && (
         <div className="w-full h-32 md:h-48 bg-gray-200">
-          <img src={ctx.restaurantBanner} className="w-full h-full object-cover" alt="Restaurant Banner" />
+          <img
+            src={ctx.restaurantBanner}
+            className="w-full h-full object-cover"
+            alt="Restaurant Banner"
+          />
         </div>
       )}
-      <header className={`border-b border-border bg-card px-5 ${ctx.restaurantBanner ? 'py-4' : 'py-5'}`}>
+      <header
+        className={`border-b border-border bg-card px-5 ${ctx.restaurantBanner ? "py-4" : "py-5"}`}
+      >
         <div className="mx-auto flex max-w-xl items-center justify-between">
           <div className="flex items-center gap-3">
             {ctx.restaurantLogo ? (
-              <img src={ctx.restaurantLogo} alt="Logo" className="size-10 rounded-full object-cover border border-border shadow-sm" />
+              <img
+                src={ctx.restaurantLogo}
+                alt="Logo"
+                className="size-10 rounded-full object-cover border border-border shadow-sm"
+              />
             ) : (
               <div className="grid size-10 place-items-center rounded-xl bg-primary shadow-inner">
                 <span className="font-display font-bold text-primary-foreground">
@@ -583,14 +658,13 @@ function TableMenuPage() {
       <div className="mx-auto max-w-2xl px-5">
         {user && (
           <div className="flex items-center justify-between py-4 border-b border-border">
-            <Label htmlFor="safe-toggle" className="text-sm font-medium text-muted-foreground cursor-pointer">
+            <Label
+              htmlFor="safe-toggle"
+              className="text-sm font-medium text-muted-foreground cursor-pointer"
+            >
               Show only items I can eat
             </Label>
-            <Switch
-              id="safe-toggle"
-              checked={showOnlySafe}
-              onCheckedChange={setShowOnlySafe}
-            />
+            <Switch id="safe-toggle" checked={showOnlySafe} onCheckedChange={setShowOnlySafe} />
           </div>
         )}
 
@@ -609,7 +683,7 @@ function TableMenuPage() {
             }
           }}
         />
-        
+
         {menuQuery.isLoading && (
           <div className="flex justify-center py-16">
             <Loader2 className="size-5 animate-spin text-primary" />
@@ -622,23 +696,25 @@ function TableMenuPage() {
               <Sparkles className="size-5 text-primary" /> Recommended for you
             </h2>
             <div className="mt-3 flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
-              {recQuery.data.filter(item => {
-                if (!showOnlySafe) return true;
-                const c = getConflicts(item, profileQuery.data);
-                return c.allergenConflicts.length === 0 && !c.dietaryMismatch;
-              }).map((item) => (
-                <MenuItemCard
-                  key={item.id}
-                  item={item}
-                  profile={profileQuery.data}
-                  isRec
-                  onClick={() => {
-                    setSelected(item);
-                    setQty(1);
-                    setNotes("");
-                  }}
-                />
-              ))}
+              {recQuery.data
+                .filter((item) => {
+                  if (!showOnlySafe) return true;
+                  const c = getConflicts(item, profileQuery.data);
+                  return c.allergenConflicts.length === 0 && !c.dietaryMismatch;
+                })
+                .map((item) => (
+                  <MenuItemCard
+                    key={item.id}
+                    item={item}
+                    profile={profileQuery.data}
+                    isRec
+                    onClick={() => {
+                      setSelected(item);
+                      setQty(1);
+                      setNotes("");
+                    }}
+                  />
+                ))}
             </div>
           </section>
         )}
@@ -647,23 +723,25 @@ function TableMenuPage() {
           <section key={category} className="pt-8">
             <h2 className="font-display text-lg text-foreground">{category}</h2>
             <ul className="mt-3 space-y-3">
-              {items.filter(item => {
-                if (!showOnlySafe) return true;
-                const c = getConflicts(item, profileQuery.data);
-                return c.allergenConflicts.length === 0 && !c.dietaryMismatch;
-              }).map((item) => (
-                <li key={item.id}>
-                  <MenuItemCard
-                    item={item}
-                    profile={profileQuery.data}
-                    onClick={() => {
-                      setSelected(item);
-                      setQty(1);
-                      setNotes("");
-                    }}
-                  />
-                </li>
-              ))}
+              {items
+                .filter((item) => {
+                  if (!showOnlySafe) return true;
+                  const c = getConflicts(item, profileQuery.data);
+                  return c.allergenConflicts.length === 0 && !c.dietaryMismatch;
+                })
+                .map((item) => (
+                  <li key={item.id}>
+                    <MenuItemCard
+                      item={item}
+                      profile={profileQuery.data}
+                      onClick={() => {
+                        setSelected(item);
+                        setQty(1);
+                        setNotes("");
+                      }}
+                    />
+                  </li>
+                ))}
             </ul>
           </section>
         ))}
@@ -678,7 +756,7 @@ function TableMenuPage() {
           </Button>
         </div>
       )}
-      
+
       <CallWaiterButton qrToken={qrToken} />
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
@@ -714,10 +792,16 @@ function TableMenuPage() {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 rounded-md border border-input p-1">
-                  <Button variant="ghost" size="icon" onClick={() => setQty((q) => Math.max(1, q - 1))}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  >
                     <Minus />
                   </Button>
-                  <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">{qty}</span>
+                  <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">
+                    {qty}
+                  </span>
                   <Button variant="ghost" size="icon" onClick={() => setQty((q) => q + 1)}>
                     <Plus />
                   </Button>
@@ -725,9 +809,7 @@ function TableMenuPage() {
                 <Button
                   className="flex-1"
                   disabled={addMutation.isPending}
-                  onClick={() =>
-                    addMutation.mutate({ menuItemId: selected.id, qty, notes })
-                  }
+                  onClick={() => addMutation.mutate({ menuItemId: selected.id, qty, notes })}
                 >
                   {addMutation.isPending && <Loader2 className="animate-spin" />}
                   Add · {money(selected.price * qty)}
@@ -738,15 +820,18 @@ function TableMenuPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!allergyWarning} onOpenChange={(open) => {
-        if (!open) {
-          setAllergyWarning(null);
-          if (resolveAllergyRef.current) {
-            resolveAllergyRef.current(false);
-            resolveAllergyRef.current = null;
+      <Dialog
+        open={!!allergyWarning}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAllergyWarning(null);
+            if (resolveAllergyRef.current) {
+              resolveAllergyRef.current(false);
+              resolveAllergyRef.current = null;
+            }
           }
-        }
-      }}>
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-destructive/10">
@@ -807,12 +892,17 @@ function TableMenuPage() {
               <div className="flex items-center gap-2 mt-2">
                 <div className="flex -space-x-2">
                   {participantsQuery.data.map((p: any) => (
-                    <div key={p.device_token} className="size-6 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-[10px] font-bold text-primary">
+                    <div
+                      key={p.device_token}
+                      className="size-6 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-[10px] font-bold text-primary"
+                    >
                       {p.name?.slice(0, 2).toUpperCase() || "?"}
                     </div>
                   ))}
                 </div>
-                <span className="text-xs text-muted-foreground">{participantsQuery.data.length} people</span>
+                <span className="text-xs text-muted-foreground">
+                  {participantsQuery.data.length} people
+                </span>
               </div>
             )}
           </SheetHeader>
@@ -820,78 +910,112 @@ function TableMenuPage() {
             {lines.length === 0 && (
               <p className="text-sm text-muted-foreground">Nothing added yet.</p>
             )}
-            
+
             {participantsQuery.data && participantsQuery.data.length > 1 ? (
               <div className="space-y-6">
                 <div>
-                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Items</h3>
-                  {lines.filter(l => l.added_by_device_token === deviceToken).length === 0 ? (
-                    <p className="text-sm italic text-muted-foreground">You haven't added anything.</p>
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Your Items
+                  </h3>
+                  {lines.filter((l) => l.added_by_device_token === deviceToken).length === 0 ? (
+                    <p className="text-sm italic text-muted-foreground">
+                      You haven't added anything.
+                    </p>
                   ) : (
                     <div className="space-y-4">
-                      {lines.filter(l => l.added_by_device_token === deviceToken).map((line) => (
-                        <div key={line.id} className="flex gap-3 border-b border-border pb-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-foreground">{line.menu_item.name}</p>
-                            {line.customizations?.notes && (
-                              <p className="mt-0.5 text-xs italic text-muted-foreground">
-                                “{line.customizations.notes}”
-                              </p>
-                            )}
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="size-7"
-                                disabled={qtyMutation.isPending}
-                                onClick={() =>
-                                  qtyMutation.mutate({ lineId: line.id, qty: line.qty - 1 })
-                                }
-                              >
-                                <Minus className="size-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">{line.qty}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="size-7"
-                                disabled={qtyMutation.isPending}
-                                onClick={() =>
-                                  qtyMutation.mutate({ lineId: line.id, qty: line.qty + 1 })
-                                }
-                              >
-                                <Plus className="size-3" />
-                              </Button>
+                      {lines
+                        .filter((l) => l.added_by_device_token === deviceToken)
+                        .map((line) => (
+                          <div key={line.id} className="flex gap-3 border-b border-border pb-4">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-foreground">{line.menu_item.name}</p>
+                              {line.customizations?.notes && (
+                                <p className="mt-0.5 text-xs italic text-muted-foreground">
+                                  “{line.customizations.notes}”
+                                </p>
+                              )}
+                              <div className="mt-2 flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-7"
+                                  disabled={qtyMutation.isPending}
+                                  onClick={() =>
+                                    qtyMutation.mutate({ lineId: line.id, qty: line.qty - 1 })
+                                  }
+                                >
+                                  <Minus className="size-3" />
+                                </Button>
+                                <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">
+                                  {line.qty}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-7"
+                                  disabled={qtyMutation.isPending}
+                                  onClick={() =>
+                                    qtyMutation.mutate({ lineId: line.id, qty: line.qty + 1 })
+                                  }
+                                >
+                                  <Plus className="size-3" />
+                                </Button>
+                              </div>
                             </div>
+                            <p className="shrink-0 font-medium text-foreground text-right">
+                              {money(line.menu_item.price * line.qty)}
+                            </p>
                           </div>
-                          <p className="shrink-0 font-medium text-foreground text-right">
-                            {money(line.menu_item.price * line.qty)}
-                          </p>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   )}
                 </div>
-                
+
                 <div>
-                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Group Orders</h3>
-                  {lines.filter(l => l.added_by_device_token !== deviceToken).length === 0 ? (
-                    <p className="text-sm italic text-muted-foreground">No one else has ordered yet.</p>
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Group Orders
+                  </h3>
+                  {lines.filter((l) => l.added_by_device_token !== deviceToken).length === 0 ? (
+                    <p className="text-sm italic text-muted-foreground">
+                      No one else has ordered yet.
+                    </p>
                   ) : (
                     <div className="space-y-4 rounded-xl bg-accent/30 p-3">
-                      {Array.from(new Set(lines.filter(l => l.added_by_device_token !== deviceToken).map(l => l.added_by_name))).map(name => {
-                        const personLines = lines.filter(l => l.added_by_device_token !== deviceToken && l.added_by_name === name);
-                        const personTotal = personLines.reduce((sum, l) => sum + l.menu_item.price * l.qty, 0);
+                      {Array.from(
+                        new Set(
+                          lines
+                            .filter((l) => l.added_by_device_token !== deviceToken)
+                            .map((l) => l.added_by_name),
+                        ),
+                      ).map((name) => {
+                        const personLines = lines.filter(
+                          (l) =>
+                            l.added_by_device_token !== deviceToken && l.added_by_name === name,
+                        );
+                        const personTotal = personLines.reduce(
+                          (sum, l) => sum + l.menu_item.price * l.qty,
+                          0,
+                        );
                         return (
-                          <div key={name} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                          <div
+                            key={name}
+                            className="border-b border-border/50 pb-3 last:border-0 last:pb-0"
+                          >
                             <div className="flex justify-between items-baseline mb-2">
-                              <p className="font-semibold text-sm text-foreground">{name || "Guest"}</p>
+                              <p className="font-semibold text-sm text-foreground">
+                                {name || "Guest"}
+                              </p>
                               <p className="text-sm font-medium">{money(personTotal)}</p>
                             </div>
                             <ul className="space-y-1">
-                              {personLines.map(l => (
-                                <li key={l.id} className="flex justify-between text-xs text-muted-foreground">
-                                  <span>{l.menu_item.name} x{l.qty}</span>
+                              {personLines.map((l) => (
+                                <li
+                                  key={l.id}
+                                  className="flex justify-between text-xs text-muted-foreground"
+                                >
+                                  <span>
+                                    {l.menu_item.name} x{l.qty}
+                                  </span>
                                   <span>{money(l.menu_item.price * l.qty)}</span>
                                 </li>
                               ))}
@@ -919,21 +1043,19 @@ function TableMenuPage() {
                         size="icon"
                         className="size-7"
                         disabled={qtyMutation.isPending}
-                        onClick={() =>
-                          qtyMutation.mutate({ lineId: line.id, qty: line.qty - 1 })
-                        }
+                        onClick={() => qtyMutation.mutate({ lineId: line.id, qty: line.qty - 1 })}
                       >
                         <Minus className="size-3" />
                       </Button>
-                      <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">{line.qty}</span>
+                      <span className="w-8 text-center text-sm font-medium bg-secondary text-secondary-foreground rounded py-1">
+                        {line.qty}
+                      </span>
                       <Button
                         variant="outline"
                         size="icon"
                         className="size-7"
                         disabled={qtyMutation.isPending}
-                        onClick={() =>
-                          qtyMutation.mutate({ lineId: line.id, qty: line.qty + 1 })
-                        }
+                        onClick={() => qtyMutation.mutate({ lineId: line.id, qty: line.qty + 1 })}
                       >
                         <Plus className="size-3" />
                       </Button>
@@ -947,19 +1069,19 @@ function TableMenuPage() {
             )}
           </div>
           <div className="border-t border-border bg-card pb-6 pt-4">
-          {lines.length > 0 && order && (
-            <Button
-              className="mt-4 w-full"
-              onClick={() =>
-                navigate({
-                  to: "/checkout",
-                  search: { order: order.id, session: ctx.sessionId, table: qrToken },
-                })
-              }
-            >
-              Go to checkout
-            </Button>
-          )}
+            {lines.length > 0 && order && (
+              <Button
+                className="mt-4 w-full"
+                onClick={() =>
+                  navigate({
+                    to: "/checkout",
+                    search: { order: order.id, session: ctx.sessionId, table: qrToken },
+                  })
+                }
+              >
+                Go to checkout
+              </Button>
+            )}
           </div>
         </SheetContent>
       </Sheet>

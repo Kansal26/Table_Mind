@@ -1,9 +1,19 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchLiveOrdersFn, updateKitchenStatusFn, fetchAnalyticsFn, getKitchenLoadFn, forceCloseSessionFn, exportOrdersFn, exportRevenueSummaryFn, exportDishFeedbackFn, exportCouponsFn } from "@/lib/admin.functions";
+import {
+  fetchLiveOrdersFn,
+  updateKitchenStatusFn,
+  fetchAnalyticsFn,
+  getKitchenLoadFn,
+  forceCloseSessionFn,
+  exportOrdersFn,
+  exportRevenueSummaryFn,
+  exportDishFeedbackFn,
+  exportCouponsFn,
+} from "@/lib/admin.functions";
 import { fetchAdminWaiterCalls, acknowledgeWaiterCall, resolveWaiterCall } from "@/lib/waiter";
 import { generateCSV, downloadCSV } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
@@ -24,47 +34,104 @@ function AdminDashboardPage() {
   const [exportFrom, setExportFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
+    return d.toISOString().split("T")[0];
   });
   const [exportTo, setExportTo] = useState(() => {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split("T")[0];
   });
 
   const exportOrdersMutation = useMutation({
     mutationFn: async () => {
-      const data = await exportOrdersFn({ data: { token, restaurantId: restaurant.id, fromDate: exportFrom, toDate: exportTo } });
+      const data = await exportOrdersFn({
+        data: { token, restaurantId: restaurant.id, fromDate: exportFrom, toDate: exportTo },
+      });
       if (data.length === 0) {
         toast.info("No orders found in this date range");
-        downloadCSV(generateCSV(["Order ID", "Date", "Table", "Items", "Subtotal", "Discount", "Credits Applied", "Tax", "Total", "Payment Status", "Guest Email"], []), `tablemind-orders-${new Date().toISOString().split('T')[0]}.csv`);
+        downloadCSV(
+          generateCSV(
+            [
+              "Order ID",
+              "Date",
+              "Table",
+              "Items",
+              "Subtotal",
+              "Discount",
+              "Credits Applied",
+              "Tax",
+              "Total",
+              "Payment Status",
+              "Guest Email",
+            ],
+            [],
+          ),
+          `tablemind-orders-${new Date().toISOString().split("T")[0]}.csv`,
+        );
         return;
       }
-      const headers = ["Order ID", "Date", "Table", "Items", "Subtotal", "Discount", "Credits Applied", "Tax", "Total", "Payment Status", "Guest Email"];
+      const headers = [
+        "Order ID",
+        "Date",
+        "Table",
+        "Items",
+        "Subtotal",
+        "Discount",
+        "Credits Applied",
+        "Tax",
+        "Total",
+        "Payment Status",
+        "Guest Email",
+      ];
       const rows = data.map((row: any) => [
-        row.orderId, row.date, row.table, row.items,
-        row.subtotal?.toString() || "0", row.discount?.toString() || "0", 
-        row.creditsApplied?.toString() || "0", row.tax?.toString() || "0", 
-        row.total?.toString() || "0", row.paymentStatus, row.guestEmail
+        row.orderId,
+        row.date,
+        row.table,
+        row.items,
+        row.subtotal?.toString() || "0",
+        row.discount?.toString() || "0",
+        row.creditsApplied?.toString() || "0",
+        row.tax?.toString() || "0",
+        row.total?.toString() || "0",
+        row.paymentStatus,
+        row.guestEmail,
       ]);
-      downloadCSV(generateCSV(headers, rows), `tablemind-orders-${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        generateCSV(headers, rows),
+        `tablemind-orders-${new Date().toISOString().split("T")[0]}.csv`,
+      );
     },
-    onError: () => toast.error("Export failed, try again")
+    onError: () => toast.error("Export failed, try again"),
   });
 
   const exportRevenueMutation = useMutation({
     mutationFn: async () => {
-      const data = await exportRevenueSummaryFn({ data: { token, restaurantId: restaurant.id, fromDate: exportFrom, toDate: exportTo } });
+      const data = await exportRevenueSummaryFn({
+        data: { token, restaurantId: restaurant.id, fromDate: exportFrom, toDate: exportTo },
+      });
       if (data.length === 0) {
         toast.info("No revenue data found in this date range");
-        downloadCSV(generateCSV(["Date", "Orders Count", "Gross Revenue", "Total Discounts", "Net Revenue"], []), `tablemind-revenue-${new Date().toISOString().split('T')[0]}.csv`);
+        downloadCSV(
+          generateCSV(
+            ["Date", "Orders Count", "Gross Revenue", "Total Discounts", "Net Revenue"],
+            [],
+          ),
+          `tablemind-revenue-${new Date().toISOString().split("T")[0]}.csv`,
+        );
         return;
       }
       const headers = ["Date", "Orders Count", "Gross Revenue", "Total Discounts", "Net Revenue"];
       const rows = data.map((row: any) => [
-        row.date, row.orders.toString(), row.gross.toString(), row.discounts.toString(), row.net.toString()
+        row.date,
+        row.orders.toString(),
+        row.gross.toString(),
+        row.discounts.toString(),
+        row.net.toString(),
       ]);
-      downloadCSV(generateCSV(headers, rows), `tablemind-revenue-${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        generateCSV(headers, rows),
+        `tablemind-revenue-${new Date().toISOString().split("T")[0]}.csv`,
+      );
     },
-    onError: () => toast.error("Export failed, try again")
+    onError: () => toast.error("Export failed, try again"),
   });
 
   const exportFeedbackMutation = useMutation({
@@ -72,23 +139,43 @@ function AdminDashboardPage() {
       const data = await exportDishFeedbackFn({ data: { token, restaurantId: restaurant.id } });
       const headers = ["Dish Name", "Category", "Average Rating", "Total Reviews", "Total Orders"];
       const rows = data.map((row: any) => [
-        row.name, row.category, row.avgRating.toString(), row.reviews.toString(), row.totalOrders.toString()
+        row.name,
+        row.category,
+        row.avgRating.toString(),
+        row.reviews.toString(),
+        row.totalOrders.toString(),
       ]);
-      downloadCSV(generateCSV(headers, rows), `tablemind-dish-feedback-${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        generateCSV(headers, rows),
+        `tablemind-dish-feedback-${new Date().toISOString().split("T")[0]}.csv`,
+      );
     },
-    onError: () => toast.error("Export failed, try again")
+    onError: () => toast.error("Export failed, try again"),
   });
 
   const exportCouponsMutation = useMutation({
     mutationFn: async () => {
       const data = await exportCouponsFn({ data: { token, restaurantId: restaurant.id } });
-      const headers = ["Coupon Name", "Type", "Times Redeemed", "Total Discount Given", "Average Discount Per Order"];
+      const headers = [
+        "Coupon Name",
+        "Type",
+        "Times Redeemed",
+        "Total Discount Given",
+        "Average Discount Per Order",
+      ];
       const rows = data.map((row: any) => [
-        row.name, row.type, row.redeemed.toString(), row.totalDiscount.toString(), row.avgDiscount.toString()
+        row.name,
+        row.type,
+        row.redeemed.toString(),
+        row.totalDiscount.toString(),
+        row.avgDiscount.toString(),
       ]);
-      downloadCSV(generateCSV(headers, rows), `tablemind-coupons-${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        generateCSV(headers, rows),
+        `tablemind-coupons-${new Date().toISOString().split("T")[0]}.csv`,
+      );
     },
-    onError: () => toast.error("Export failed, try again")
+    onError: () => toast.error("Export failed, try again"),
   });
 
   const playBeep = () => {
@@ -143,22 +230,35 @@ function AdminDashboardPage() {
 
     const waiterChannel = supabase
       .channel("waiter-calls-alert")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "waiter_calls", filter: `restaurant_id=eq.${restaurant.id}` }, async (payload) => {
-        playBeep();
-        
-        // Fetch table name for the banner
-        const newCall = payload.new as any;
-        const { data: tableData } = await supabase.from("tables").select("label").eq("id", newCall.table_id).single();
-        
-        setIncomingCall({
-          id: newCall.id,
-          reason: newCall.reason,
-          table_label: tableData?.label || "Unknown Table",
-          created_at: newCall.created_at
-        });
-        
-        queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "waiter_calls",
+          filter: `restaurant_id=eq.${restaurant.id}`,
+        },
+        async (payload) => {
+          playBeep();
+
+          // Fetch table name for the banner
+          const newCall = payload.new as any;
+          const { data: tableData } = await supabase
+            .from("tables")
+            .select("label")
+            .eq("id", newCall.table_id)
+            .single();
+
+          setIncomingCall({
+            id: newCall.id,
+            reason: newCall.reason,
+            table_label: tableData?.label || "Unknown Table",
+            created_at: newCall.created_at,
+          });
+
+          queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -169,18 +269,19 @@ function AdminDashboardPage() {
 
   // Mutations
   const updateStatusMutation = useMutation({
-    mutationFn: (opts: { orderId: string, status: any }) => updateKitchenStatusFn({ data: { ...opts, token } }),
+    mutationFn: (opts: { orderId: string; status: any }) =>
+      updateKitchenStatusFn({ data: { ...opts, token } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-live-orders", restaurant.id] });
       queryClient.invalidateQueries({ queryKey: ["admin-kitchen-load", restaurant.id] });
-    }
+    },
   });
 
   const clearTableMutation = useMutation({
     mutationFn: (sessionId: string) => forceCloseSessionFn({ data: { token, sessionId } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-live-orders", restaurant.id] });
-    }
+    },
   });
 
   const ackCallMutation = useMutation({
@@ -188,7 +289,7 @@ function AdminDashboardPage() {
     onSuccess: () => {
       setIncomingCall(null);
       queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
-    }
+    },
   });
 
   const resolveCallMutation = useMutation({
@@ -196,7 +297,7 @@ function AdminDashboardPage() {
     onSuccess: () => {
       setIncomingCall(null);
       queryClient.invalidateQueries({ queryKey: ["admin-waiter-calls", restaurant.id] });
-    }
+    },
   });
 
   const liveOrders = ordersQuery.data?.filter((o: any) => o.kitchen_status !== "served") || [];
@@ -206,12 +307,12 @@ function AdminDashboardPage() {
   const loadColors = {
     low: "bg-green-100 text-green-800 border-green-200",
     medium: "bg-amber-100 text-amber-800 border-amber-200",
-    high: "bg-red-100 text-red-800 border-red-200"
+    high: "bg-red-100 text-red-800 border-red-200",
   };
   const loadLabels = {
     low: "Kitchen is clear",
     medium: "Moderate load",
-    high: "Kitchen is busy"
+    high: "Kitchen is busy",
   };
 
   const analytics = analyticsQuery.data;
@@ -220,12 +321,19 @@ function AdminDashboardPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Kitchen Dashboard</h1>
-        
-        <div className={`px-4 py-2 rounded-full border font-semibold flex items-center gap-2 ${loadColors[loadData.level]}`}>
-          <div className={`w-3 h-3 rounded-full ${
-            loadData.level === 'low' ? 'bg-green-500' : 
-            loadData.level === 'medium' ? 'bg-amber-500' : 'bg-red-500'
-          }`} />
+
+        <div
+          className={`px-4 py-2 rounded-full border font-semibold flex items-center gap-2 ${loadColors[loadData.level]}`}
+        >
+          <div
+            className={`w-3 h-3 rounded-full ${
+              loadData.level === "low"
+                ? "bg-green-500"
+                : loadData.level === "medium"
+                  ? "bg-amber-500"
+                  : "bg-red-500"
+            }`}
+          />
           {loadLabels[loadData.level]} ({loadData.count} active)
         </div>
       </div>
@@ -235,15 +343,27 @@ function AdminDashboardPage() {
           <div className="flex items-center gap-3">
             <Bell className="text-red-600 animate-bounce" size={24} />
             <div>
-              <h2 className="text-red-900 font-bold text-lg">🔔 {incomingCall.table_label} is calling for assistance!</h2>
-              <p className="text-red-800 text-sm">Reason: {incomingCall.reason} • {new Date(incomingCall.created_at).toLocaleTimeString()}</p>
+              <h2 className="text-red-900 font-bold text-lg">
+                🔔 {incomingCall.table_label} is calling for assistance!
+              </h2>
+              <p className="text-red-800 text-sm">
+                Reason: {incomingCall.reason} •{" "}
+                {new Date(incomingCall.created_at).toLocaleTimeString()}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-200" onClick={() => ackCallMutation.mutate(incomingCall.id)}>
+            <Button
+              variant="outline"
+              className="border-red-300 text-red-700 hover:bg-red-200"
+              onClick={() => ackCallMutation.mutate(incomingCall.id)}
+            >
               Acknowledge
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => resolveCallMutation.mutate(incomingCall.id)}>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => resolveCallMutation.mutate(incomingCall.id)}
+            >
               Resolve
             </Button>
           </div>
@@ -272,18 +392,27 @@ function AdminDashboardPage() {
                     <td className="py-3 font-medium">{call.table_label}</td>
                     <td className="py-3 capitalize">{call.reason}</td>
                     <td className="py-3 text-sm text-muted-foreground">
-                      {Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000)} mins ago
+                      {Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000)} mins
+                      ago
                     </td>
                     <td className="py-3">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        call.status === 'pending' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          call.status === "pending"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
                         {call.status}
                       </span>
                     </td>
                     <td className="py-3 text-right space-x-2">
-                      {call.status === 'pending' && (
-                        <Button size="sm" variant="outline" onClick={() => ackCallMutation.mutate(call.id)}>
+                      {call.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => ackCallMutation.mutate(call.id)}
+                        >
                           Ack
                         </Button>
                       )}
@@ -302,34 +431,46 @@ function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-xl font-semibold">Live Orders</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {liveOrders.map((order: any) => (
-              <div key={order.id} className="bg-card border border-border rounded-xl shadow-sm p-4 flex flex-col">
+              <div
+                key={order.id}
+                className="bg-card border border-border rounded-xl shadow-sm p-4 flex flex-col"
+              >
                 <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
                   <div>
-                    <h3 className="font-bold text-lg">{(order.sessions as any)?.tables?.label || "Unknown Table"}</h3>
+                    <h3 className="font-bold text-lg">
+                      {(order.sessions as any)?.tables?.label || "Unknown Table"}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      {Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)} mins ago
+                      {Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)} mins
+                      ago
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <select 
+                    <select
                       className="p-1 rounded border text-sm font-medium bg-background"
                       value={order.kitchen_status || "received"}
-                      onChange={(e) => updateStatusMutation.mutate({ orderId: order.id, status: e.target.value })}
+                      onChange={(e) =>
+                        updateStatusMutation.mutate({ orderId: order.id, status: e.target.value })
+                      }
                     >
                       <option value="received">Received</option>
                       <option value="preparing">Preparing</option>
                       <option value="ready">Ready</option>
                       <option value="served">Served</option>
                     </select>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-7 text-xs px-2 text-destructive border-destructive/30 hover:bg-destructive/10"
                       onClick={() => {
-                        if (confirm(`Are you sure you want to clear ${(order.sessions as any)?.tables?.label || "this table"}? This will close their session.`)) {
+                        if (
+                          confirm(
+                            `Are you sure you want to clear ${(order.sessions as any)?.tables?.label || "this table"}? This will close their session.`,
+                          )
+                        ) {
                           clearTableMutation.mutate(order.session_id);
                         }
                       }}
@@ -339,7 +480,7 @@ function AdminDashboardPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 space-y-2 mb-4">
                   {(order.order_items || []).map((item: any) => (
                     <div key={item.id} className="flex justify-between items-start text-sm">
@@ -365,23 +506,30 @@ function AdminDashboardPage() {
           </div>
 
           <div className="mt-8 border-t border-border pt-4">
-            <button 
+            <button
               onClick={() => setShowCompleted(!showCompleted)}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               {showCompleted ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               Completed today ({completedOrders.length})
             </button>
-            
+
             {showCompleted && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 opacity-75">
                 {completedOrders.map((order: any) => (
-                  <div key={order.id} className="bg-muted border border-border rounded-xl p-4 flex flex-col">
+                  <div
+                    key={order.id}
+                    className="bg-muted border border-border rounded-xl p-4 flex flex-col"
+                  >
                     <div className="flex justify-between items-start mb-4 border-b border-border pb-3">
                       <div>
-                        <h3 className="font-bold">{(order.sessions as any)?.tables?.label || "Unknown Table"}</h3>
+                        <h3 className="font-bold">
+                          {(order.sessions as any)?.tables?.label || "Unknown Table"}
+                        </h3>
                       </div>
-                      <span className="text-xs font-bold uppercase text-muted-foreground">Served</span>
+                      <span className="text-xs font-bold uppercase text-muted-foreground">
+                        Served
+                      </span>
                     </div>
                     <div className="space-y-1">
                       {(order.order_items || []).map((item: any) => (
@@ -400,7 +548,7 @@ function AdminDashboardPage() {
 
         <div className="space-y-8">
           <h2 className="text-xl font-semibold">Analytics</h2>
-          
+
           <div className="bg-card border border-border rounded-xl shadow-sm p-4">
             <h3 className="font-medium text-muted-foreground mb-4">Recommendation Engine</h3>
             {analytics && (
@@ -408,26 +556,42 @@ function AdminDashboardPage() {
                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
                   <div>
                     <div className="font-bold text-sm">AI (LLM)</div>
-                    <div className="text-xs text-muted-foreground">{analytics.recommendations.llm.shown} shown</div>
+                    <div className="text-xs text-muted-foreground">
+                      {analytics.recommendations.llm.shown} shown
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold">{analytics.recommendations.llm.added}</div>
                     <div className="text-xs text-muted-foreground">
-                      {analytics.recommendations.llm.shown > 0 ? 
-                        Math.round((analytics.recommendations.llm.added / analytics.recommendations.llm.shown) * 100) : 0}% CV
+                      {analytics.recommendations.llm.shown > 0
+                        ? Math.round(
+                            (analytics.recommendations.llm.added /
+                              analytics.recommendations.llm.shown) *
+                              100,
+                          )
+                        : 0}
+                      % CV
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
                   <div>
                     <div className="font-bold text-sm">Rules (Fallback)</div>
-                    <div className="text-xs text-muted-foreground">{analytics.recommendations.rule.shown} shown</div>
+                    <div className="text-xs text-muted-foreground">
+                      {analytics.recommendations.rule.shown} shown
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold">{analytics.recommendations.rule.added}</div>
                     <div className="text-xs text-muted-foreground">
-                      {analytics.recommendations.rule.shown > 0 ? 
-                        Math.round((analytics.recommendations.rule.added / analytics.recommendations.rule.shown) * 100) : 0}% CV
+                      {analytics.recommendations.rule.shown > 0
+                        ? Math.round(
+                            (analytics.recommendations.rule.added /
+                              analytics.recommendations.rule.shown) *
+                              100,
+                          )
+                        : 0}
+                      % CV
                     </div>
                   </div>
                 </div>
@@ -438,8 +602,11 @@ function AdminDashboardPage() {
           <div className="bg-card border border-border rounded-xl shadow-sm p-4">
             <h3 className="font-medium text-muted-foreground mb-4">Dish Feedback (Phase 5)</h3>
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {analytics?.feedbackList.map(fb => (
-                <div key={fb.name} className={`flex justify-between items-center p-2 rounded-lg text-sm ${fb.avg < 3.5 ? 'bg-amber-50 text-amber-900' : ''}`}>
+              {analytics?.feedbackList.map((fb) => (
+                <div
+                  key={fb.name}
+                  className={`flex justify-between items-center p-2 rounded-lg text-sm ${fb.avg < 3.5 ? "bg-amber-50 text-amber-900" : ""}`}
+                >
                   <div className="truncate pr-4 font-medium">{fb.name}</div>
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="flex items-center gap-1 font-bold">
@@ -450,7 +617,9 @@ function AdminDashboardPage() {
                 </div>
               ))}
               {(!analytics?.feedbackList || analytics.feedbackList.length === 0) && (
-                <div className="text-sm text-muted-foreground text-center py-4">No feedback yet.</div>
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No feedback yet.
+                </div>
               )}
             </div>
           </div>
@@ -459,7 +628,10 @@ function AdminDashboardPage() {
             <h3 className="font-medium text-muted-foreground mb-4">Coupon Usage (Phase 4)</h3>
             <div className="space-y-2">
               {analytics?.couponList.map((c: any) => (
-                <div key={c.code} className="flex justify-between items-center p-2 border-b border-border last:border-0 text-sm">
+                <div
+                  key={c.code}
+                  className="flex justify-between items-center p-2 border-b border-border last:border-0 text-sm"
+                >
                   <div>
                     <div className="font-medium">{c.name}</div>
                     <div className="text-xs text-muted-foreground">Code: {c.code}</div>
@@ -473,27 +645,43 @@ function AdminDashboardPage() {
                 </div>
               ))}
               {(!analytics?.couponList || analytics.couponList.length === 0) && (
-                <div className="text-sm text-muted-foreground text-center py-4">No coupons redeemed.</div>
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No coupons redeemed.
+                </div>
               )}
             </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl shadow-sm p-4">
-            <h3 className="font-medium text-muted-foreground mb-4 flex items-center gap-2">📊 Export Data</h3>
-            
+            <h3 className="font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              📊 Export Data
+            </h3>
+
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Date Range (Orders & Revenue)</label>
+                <label className="text-sm font-medium text-foreground">
+                  Date Range (Orders & Revenue)
+                </label>
                 <div className="flex gap-2">
-                  <input type="date" className="border border-border rounded px-2 py-1 text-sm flex-1" value={exportFrom} onChange={e => setExportFrom(e.target.value)} />
+                  <input
+                    type="date"
+                    className="border border-border rounded px-2 py-1 text-sm flex-1"
+                    value={exportFrom}
+                    onChange={(e) => setExportFrom(e.target.value)}
+                  />
                   <span className="text-muted-foreground py-1">to</span>
-                  <input type="date" className="border border-border rounded px-2 py-1 text-sm flex-1" value={exportTo} onChange={e => setExportTo(e.target.value)} />
+                  <input
+                    type="date"
+                    className="border border-border rounded px-2 py-1 text-sm flex-1"
+                    value={exportTo}
+                    onChange={(e) => setExportTo(e.target.value)}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   disabled={exportOrdersMutation.isPending}
                   onClick={() => exportOrdersMutation.mutate()}
                   className="w-full flex justify-between"
@@ -501,9 +689,9 @@ function AdminDashboardPage() {
                   <span>Orders</span>
                   <span>Download ↓</span>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   disabled={exportRevenueMutation.isPending}
                   onClick={() => exportRevenueMutation.mutate()}
                   className="w-full flex justify-between"
@@ -512,8 +700,8 @@ function AdminDashboardPage() {
                   <span>Download ↓</span>
                 </Button>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   disabled={exportFeedbackMutation.isPending}
                   onClick={() => exportFeedbackMutation.mutate()}
                   className="w-full flex justify-between"
@@ -521,9 +709,9 @@ function AdminDashboardPage() {
                   <span>Dish Feedback</span>
                   <span>Download ↓</span>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   disabled={exportCouponsMutation.isPending}
                   onClick={() => exportCouponsMutation.mutate()}
                   className="w-full flex justify-between"
