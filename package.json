@@ -65,5 +65,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.5",
     "vitest": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.2.2"
   }
 }
