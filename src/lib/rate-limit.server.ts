@@ -1,62 +1,91 @@
 import { getRequest } from "@tanstack/react-start/server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-// Minimal In-Memory Rate Limiter for Brute-Force Protection
-// IMPORTANT: This in-memory store resets on server restart.
-// For a distributed production system (Vercel/Cloudflare Edge), you MUST upgrade
-// to a persistent store like Redis (e.g. Upstash) to share rate limit state across instances.
-
-interface RateLimitData {
-  count: number;
-  resetAt: number;
-}
-
-const rateLimitStore = new Map<string, RateLimitData>();
+// Fallback in-memory store in case of RPC failure or local offline environment
+const memoryFallback = new Map<string, { count: number; resetAt: number }>();
 
 /**
- * Checks if the request should be rate-limited based on combined IP + userId.
- * Throws an Error if the limit is exceeded.
+ * Resolves the client identifier:
+ * - User ID when signed in
+ * - Otherwise device token + cf-connecting-ip (falling back to x-forwarded-for)
  */
-export function rateLimit(userId: string, action: string, limit: number, windowMs: number) {
+export function getClientIdentifier(opts?: {
+  userId?: string | null | undefined;
+  deviceToken?: string | null | undefined;
+}): string {
+  if (opts?.userId) {
+    return `user:${opts.userId}`;
+  }
+
   let ip = "unknown";
   try {
     const req = getRequest();
     if (req) {
       ip =
+        req.headers.get("cf-connecting-ip")?.trim() ||
         req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        req.headers.get("x-real-ip") ||
+        req.headers.get("x-real-ip")?.trim() ||
         "unknown";
     }
-  } catch (e) {
-    // Ignore if not available
+  } catch {
+    // Ignore context errors outside server handler
   }
 
-  const key = `${action}:${ip}:${userId}`;
-  const now = Date.now();
+  const device = opts?.deviceToken?.trim() || "guest";
+  return `device:${device}:ip:${ip}`;
+}
 
-  const record = rateLimitStore.get(key);
+/**
+ * Postgres-backed rate limiter using the atomic check_rate_limit RPC.
+ * Throws 429 when the limit is exceeded.
+ */
+export async function rateLimit(
+  identifier: string,
+  action: string,
+  limit: number,
+  windowMs: number,
+): Promise<void> {
+  const key = `${action}:${identifier}`;
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+
+  try {
+    const { data: allowed, error } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_key: key,
+      p_limit: limit,
+      p_window_seconds: windowSeconds,
+    });
+
+    if (error) {
+      // Fallback to in-memory if DB table/RPC is not yet migrated in current runtime
+      return runMemoryFallback(key, limit, windowMs);
+    }
+
+    if (allowed === false) {
+      throw new Error("429: Too Many Requests. Please try again later.");
+    }
+  } catch (err: any) {
+    if (err.message?.startsWith("429:")) {
+      throw err;
+    }
+    // Fallback gracefully on RPC connectivity issues
+    return runMemoryFallback(key, limit, windowMs);
+  }
+}
+
+function runMemoryFallback(key: string, limit: number, windowMs: number) {
+  const now = Date.now();
+  const record = memoryFallback.get(key);
 
   if (record) {
     if (now > record.resetAt) {
-      // Window expired, reset
-      rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+      memoryFallback.set(key, { count: 1, resetAt: now + windowMs });
     } else {
-      // Still in window
       if (record.count >= limit) {
         throw new Error("429: Too Many Requests. Please try again later.");
       }
       record.count += 1;
     }
   } else {
-    // New record
-    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
-  }
-
-  // Periodic cleanup of old keys to prevent memory leaks in dev/long-running processes
-  if (Math.random() < 0.05) {
-    for (const [k, v] of rateLimitStore.entries()) {
-      if (now > v.resetAt) {
-        rateLimitStore.delete(k);
-      }
-    }
+    memoryFallback.set(key, { count: 1, resetAt: now + windowMs });
   }
 }

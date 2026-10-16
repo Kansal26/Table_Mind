@@ -1,34 +1,51 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export async function getWalletBalance(userId: string, restaurantId: string): Promise<number> {
-  // Points earned and not expired
-  const { data: earnedData, error: earnedError } = await (supabaseAdmin as any)
+  const { data: txs, error } = await (supabaseAdmin as any)
     .from("wallet_transactions")
-    .select("points")
+    .select("points, expires_at, created_at")
     .eq("user_id", userId)
     .eq("restaurant_id", restaurantId)
-    .gt("points", 0)
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+    .order("created_at", { ascending: true });
 
-  if (earnedError) throw earnedError;
+  if (error) throw error;
+  if (!txs || txs.length === 0) return 0;
 
-  // Points redeemed
-  const { data: redeemedData, error: redeemedError } = await (supabaseAdmin as any)
-    .from("wallet_transactions")
-    .select("points")
-    .eq("user_id", userId)
-    .eq("restaurant_id", restaurantId)
-    .lt("points", 0);
+  // Separate positive (earned) batches and sum total redemptions
+  const earnedBatches: { points: number; expires_at: string | null }[] = [];
+  let totalRedeemed = 0;
 
-  if (redeemedError) throw redeemedError;
+  for (const tx of txs) {
+    const pts = Number(tx.points) || 0;
+    if (pts > 0) {
+      earnedBatches.push({ points: pts, expires_at: tx.expires_at });
+    } else if (pts < 0) {
+      totalRedeemed += Math.abs(pts);
+    }
+  }
 
-  const earned = (earnedData || []).reduce((sum: number, row: any) => sum + (row.points || 0), 0);
-  const redeemed = (redeemedData || []).reduce(
-    (sum: number, row: any) => sum + Math.abs(row.points || 0),
-    0,
-  );
+  // FIFO consumption of earned batches against totalRedeemed
+  const now = new Date();
+  let activeBalance = 0;
 
-  return Math.max(0, earned - redeemed);
+  for (const batch of earnedBatches) {
+    if (totalRedeemed >= batch.points) {
+      // Entire batch was consumed by past redemptions
+      totalRedeemed -= batch.points;
+    } else {
+      // Batch partially or wholly remaining
+      const unredeemedInBatch = batch.points - totalRedeemed;
+      totalRedeemed = 0;
+
+      // Check if this remaining portion has expired
+      const isExpired = batch.expires_at ? new Date(batch.expires_at) <= now : false;
+      if (!isExpired) {
+        activeBalance += unredeemedInBatch;
+      }
+    }
+  }
+
+  return Math.max(0, activeBalance);
 }
 
 export async function deductWallet(

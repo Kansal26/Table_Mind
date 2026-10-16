@@ -48,6 +48,11 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: mockSupabase,
 }));
 
+vi.mock("./rate-limit.server", () => ({
+  rateLimit: vi.fn().mockResolvedValue(undefined),
+  getClientIdentifier: vi.fn().mockReturnValue("test-client"),
+}));
+
 function chainMock(result: any, error: any = null) {
   const chain: any = {
     then: (resolve: any, reject?: any) =>

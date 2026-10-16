@@ -5,6 +5,16 @@ const resend = process.env["RESEND_API_KEY"] ? new Resend(process.env["RESEND_AP
 
 export const getEmailFrom = () => process.env["EMAIL_FROM"] || "onboarding@resend.dev";
 
+export function escapeHtml(str: string | null | undefined): string {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface OrderItem {
   name: string;
   qty: number;
@@ -29,7 +39,7 @@ export function emailLayout({
 <title>TableMind</title>
 </head>
 <body style="margin:0; padding:0; background-color:#F5EFE6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">${previewText}</div>
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">${escapeHtml(previewText)}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE6; padding: 32px 16px;">
     <tr>
       <td align="center">
@@ -66,7 +76,7 @@ export function emailButton(href: string, label: string, color = "#1A2E4A") {
     <tr>
       <td style="border-radius:10px; background-color:${color};">
         <a href="${href}" style="display:inline-block; padding:13px 28px; font-size:14px; font-weight:600; color:#FFFFFF; text-decoration:none; border-radius:10px;">
-          ${label}
+          ${escapeHtml(label)}
         </a>
       </td>
     </tr>
@@ -96,7 +106,7 @@ export function billBreakdownHtml({
       (i) => `
     <tr>
       <td style="padding:6px 0; font-size:14px; color:#1A2E4A;">
-        ${i.qty}× ${i.name}${i.customizations ? `<br/><span style="font-size:12px; color:#8A94A6;">${i.customizations}</span>` : ""}
+        ${Number(i.qty) || 1}× ${escapeHtml(i.name)}${i.customizations ? `<br/><span style="font-size:12px; color:#8A94A6;">${escapeHtml(i.customizations)}</span>` : ""}
       </td>
     </tr>`,
     )
@@ -104,8 +114,8 @@ export function billBreakdownHtml({
 
   const row = (label: string, value: string, opts?: { bold?: boolean; color?: string }) => `
     <tr>
-      <td style="padding:4px 0; font-size:${opts?.bold ? "15px" : "13px"}; color:${opts?.color || "#5A6472"}; font-weight:${opts?.bold ? "700" : "400"};">${label}</td>
-      <td align="right" style="padding:4px 0; font-size:${opts?.bold ? "15px" : "13px"}; color:${opts?.color || "#5A6472"}; font-weight:${opts?.bold ? "700" : "400"};">${value}</td>
+      <td style="padding:4px 0; font-size:${opts?.bold ? "15px" : "13px"}; color:${opts?.color || "#5A6472"}; font-weight:${opts?.bold ? "700" : "400"};">${escapeHtml(label)}</td>
+      <td align="right" style="padding:4px 0; font-size:${opts?.bold ? "15px" : "13px"}; color:${opts?.color || "#5A6472"}; font-weight:${opts?.bold ? "700" : "400"};">${escapeHtml(value)}</td>
     </tr>`;
 
   return `
@@ -136,14 +146,14 @@ export function otpEmailHtml({
   warningText?: string;
 }) {
   return `
-<h1 style="margin:0 0 8px; font-size:20px; color:#1A2E4A;">${heading}</h1>
+<h1 style="margin:0 0 8px; font-size:20px; color:#1A2E4A;">${escapeHtml(heading)}</h1>
 <p style="margin:0 0 24px; font-size:14px; color:#5A6472; line-height:1.6;">
-  ${message}
+  ${escapeHtml(message)}
 </p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center" style="background-color:#F5EFE6; border-radius:12px; padding:20px;">
-      <span style="font-size:32px; font-weight:700; letter-spacing:8px; color:${accentColor};">${code}</span>
+      <span style="font-size:32px; font-weight:700; letter-spacing:8px; color:${accentColor};">${escapeHtml(code)}</span>
     </td>
   </tr>
 </table>
@@ -154,7 +164,7 @@ ${
   warningText
     ? `
 <div style="margin-top:20px; padding:14px 16px; background-color:#FDF1EE; border-left:3px solid #C0392B; border-radius:4px;">
-  <p style="margin:0; font-size:13px; color:#9C3421; line-height:1.5;">${warningText}</p>
+  <p style="margin:0; font-size:13px; color:#9C3421; line-height:1.5;">${escapeHtml(warningText)}</p>
 </div>`
     : ""
 }
@@ -207,11 +217,11 @@ export async function sendNewOrderNotification(params: {
   const bodyHtml = `
 <h1 style="margin:0 0 4px; font-size:20px; color:#1A2E4A;">New order received</h1>
 <p style="margin:0 0 20px; font-size:14px; color:#8A94A6;">
-  ${restaurantName} — ${tableName} · ${formattedISTTimestamp}
+  ${escapeHtml(restaurantName)} — ${escapeHtml(tableName)} · ${formattedISTTimestamp}
 </p>
 ${billBreakdownHtml({ items, subtotal, discount, tax: 0, total })}
 <p style="margin:20px 0 0; font-size:12px; color:#8A94A6;">
-  Order ID: ${orderId}
+  Order ID: ${escapeHtml(orderId)}
 </p>
 ${emailButton(dashboardUrl, "View on dashboard")}
 `;
@@ -293,11 +303,11 @@ export async function sendGuestReceiptEmail(params: {
   const bodyHtml = `
 <h1 style="margin:0 0 4px; font-size:20px; color:#1A2E4A;">Thank you for dining with us</h1>
 <p style="margin:0 0 20px; font-size:14px; color:#8A94A6;">
-  ${restaurantName} — ${tableName} · ${formattedISTTimestamp}
+  ${escapeHtml(restaurantName)} — ${escapeHtml(tableName)} · ${formattedISTTimestamp}
 </p>
 ${billBreakdownHtml({ items, subtotal, discount, creditsApplied, tax, total })}
 <p style="margin:20px 0 0; font-size:12px; color:#8A94A6;">
-  Order ID: ${orderId}
+  Order ID: ${escapeHtml(orderId)}
 </p>
 <p style="margin:16px 0 0; font-size:13px; color:#5A6472;">
   We hope to see you again soon.
@@ -339,9 +349,9 @@ export async function sendRestaurantWelcomeEmail(params: {
   const dashboardUrl = `${baseUrl}/admin/dashboard`;
 
   const bodyHtml = `
-<h1 style="margin:0 0 8px; font-size:22px; color:#1A2E4A;">Welcome aboard${ownerName ? `, ${ownerName}` : ""}!</h1>
+<h1 style="margin:0 0 8px; font-size:22px; color:#1A2E4A;">Welcome aboard${ownerName ? `, ${escapeHtml(ownerName)}` : ""}!</h1>
 <p style="margin:0 0 20px; font-size:14px; color:#5A6472; line-height:1.6;">
-  ${restaurantName} is now live on TableMind. Here's what to set up next
+  ${escapeHtml(restaurantName)} is now live on TableMind. Here's what to set up next
   to get your first order flowing:
 </p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">

@@ -78,12 +78,14 @@ RULES:
 
   const groq = new Groq({ apiKey });
 
+  const voiceModel = process.env["GROQ_VOICE_MODEL"] || "llama-3.3-70b-versatile";
+
   const responsePromise = groq.chat.completions.create({
     messages: [
       { role: "system", content: prompt.replace(`The user said: "${transcript}"`, "") },
       { role: "user", content: `The user said: "${transcript}"` },
     ],
-    model: "qwen/qwen3.6-27b",
+    model: voiceModel,
     response_format: { type: "json_object" },
   });
 
@@ -101,21 +103,34 @@ RULES:
     const rawData = JSON.parse(text);
 
     // Fallback if LLM returns just the array
-    let items = Array.isArray(rawData) ? rawData : rawData.parsed_items || [];
+    const rawItems = Array.isArray(rawData) ? rawData : rawData.parsed_items || [];
 
-    // Sanitize quantities and confidences to numbers
-    items = items.map((item: any) => ({
+    // Sanitize quantities, confidences, and customizations
+    const sanitizedItems = rawItems.map((item: any) => ({
       ...item,
       quantity:
         typeof item.quantity === "string" ? parseInt(item.quantity, 10) || 1 : item.quantity,
       confidence:
         typeof item.confidence === "string" ? parseFloat(item.confidence) || 1 : item.confidence,
+      customizations: item.customizations ?? null,
     }));
 
+    // Validate with voiceOrderSchema
+    const validated = voiceOrderSchema.parse({
+      parsed_items: sanitizedItems,
+      clarification_needed: rawData.clarification_needed ?? null,
+    });
+
+    // Confirm every menu_item_id belongs to this restaurant and is available
+    const allowedItemIds = new Set(menuItems.map((m) => m.id));
+    const restaurantScopedItems = validated.parsed_items.filter((item) =>
+      allowedItemIds.has(item.menu_item_id),
+    );
+
     return {
-      parsed_items: items,
-      clarification_needed: rawData.clarification_needed || null,
-    } as VoiceOrderResponse;
+      parsed_items: restaurantScopedItems,
+      clarification_needed: validated.clarification_needed ?? null,
+    };
   } catch (err: any) {
     console.error("LLM Call Failed or Timed Out:", err);
     throw err;

@@ -109,7 +109,13 @@ export async function evaluateCoupons(
         const startMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
-        if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+        // Handles normal windows (start <= end) and overnight windows crossing midnight (start > end)
+        const inWindow =
+          startMinutes <= endMinutes
+            ? currentMinutes >= startMinutes && currentMinutes <= endMinutes
+            : currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+
+        if (inWindow) {
           isEligible = true;
           discountAmount = subtotal * (rule.discount_pct / 100);
         }

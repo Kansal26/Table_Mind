@@ -93,6 +93,16 @@ describe("recalcTotals", () => {
         };
       }
 
+      if (table === "restaurants") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { tax_rate: 0.05 }, error: null }),
+            }),
+          }),
+        };
+      }
+
       throw new Error(`Unexpected table: ${table}`);
     });
 
@@ -204,6 +214,16 @@ describe("recalcTotals", () => {
                 },
                 error: null,
               }),
+            }),
+          }),
+        };
+      }
+
+      if (table === "restaurants") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { tax_rate: 0.085 }, error: null }),
             }),
           }),
         };

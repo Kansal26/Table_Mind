@@ -311,6 +311,7 @@ export type Database = {
           name: string;
           owner_id: string | null;
           tagline: string | null;
+          tax_rate: number | null;
         };
         Insert: {
           address?: string | null;
@@ -326,6 +327,7 @@ export type Database = {
           name: string;
           owner_id?: string | null;
           tagline?: string | null;
+          tax_rate?: number | null;
         };
         Update: {
           address?: string | null;
@@ -341,6 +343,7 @@ export type Database = {
           name?: string;
           owner_id?: string | null;
           tagline?: string | null;
+          tax_rate?: number | null;
         };
         Relationships: [];
       };
@@ -742,6 +745,14 @@ export type Database = {
         Args: {
           p_user_id: string;
           p_purpose: string;
+        };
+        Returns: boolean;
+      };
+      check_rate_limit: {
+        Args: {
+          p_key: string;
+          p_limit: number;
+          p_window_seconds: number;
         };
         Returns: boolean;
       };

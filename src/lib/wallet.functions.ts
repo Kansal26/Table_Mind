@@ -26,6 +26,10 @@ export const submitFeedbackFn = createServerFn({ method: "POST" })
     const tableId = await resolveTableId(data.qrToken);
     if (!tableId) throw new Error("Invalid table QR code");
 
+    const { getClientIdentifier, rateLimit } = await import("./rate-limit.server");
+    const clientId = getClientIdentifier({ userId: context.userId });
+    await rateLimit(clientId, "submitFeedback", 5, 5 * 60 * 1000);
+
     const order = await requireOwnedOrder(tableId, data.orderId);
     if (!order) throw new Error("Order not found");
 

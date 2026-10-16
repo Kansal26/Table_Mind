@@ -135,6 +135,10 @@ export const joinSessionFn = createServerFn({ method: "POST" })
       // Ignore
     }
 
+    const { getClientIdentifier, rateLimit } = await import("./rate-limit.server");
+    const clientId = getClientIdentifier({ userId, deviceToken: data.deviceToken });
+    await rateLimit(clientId, "joinSession", 20, 5 * 60 * 1000);
+
     // Check if participant exists
     const { data: existing } = await supabaseAdmin
       .from("session_participants")
@@ -237,6 +241,10 @@ export const addToCartFn = createServerFn({ method: "POST" })
       // Ignore auth errors, fallback to guest
     }
 
+    const { getClientIdentifier, rateLimit } = await import("./rate-limit.server");
+    const clientId = getClientIdentifier({ userId, deviceToken: data.deviceToken });
+    await rateLimit(clientId, "addToCart", 40, 60 * 1000);
+
     const orderId = await ensureCartOrder(scope.sessionId, userId);
 
     // Get participant info if device token provided
@@ -321,6 +329,10 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
     } catch (e) {}
 
     if (!userId) return [];
+
+    const { getClientIdentifier, rateLimit } = await import("./rate-limit.server");
+    const clientId = getClientIdentifier({ userId });
+    await rateLimit(clientId, "getRecommendations", 30, 60 * 1000);
 
     // Get user profile
     const { data: profile } = await supabaseAdmin
@@ -527,7 +539,8 @@ IMPORTANT RULES:
         const { data: coOrders } = await supabaseAdmin
           .from("order_items")
           .select("order_id")
-          .in("menu_item_id", cartItemIds);
+          .in("menu_item_id", cartItemIds)
+          .limit(50);
 
         if (coOrders && coOrders.length > 0) {
           const coOrderIds = [...new Set(coOrders.map((co) => co.order_id))];
@@ -535,7 +548,8 @@ IMPORTANT RULES:
             const { data: coItems } = await supabaseAdmin
               .from("order_items")
               .select("menu_item_id")
-              .in("order_id", coOrderIds);
+              .in("order_id", coOrderIds)
+              .limit(100);
 
             if (coItems) {
               const counts: Record<string, number> = {};
@@ -557,20 +571,23 @@ IMPORTANT RULES:
       // Rule 2.5: Highly Rated
       const { data: allFeedback } = await supabaseAdmin
         .from("feedback")
-        .select("order_id, rating")
-        .not("rating", "is", null);
+        .select("order_id, rating, orders!inner(sessions!inner(tables!inner(restaurant_id)))")
+        .eq("orders.sessions.tables.restaurant_id", scope.restaurantId)
+        .not("rating", "is", null)
+        .limit(50);
 
       if (allFeedback && allFeedback.length > 0) {
-        const fbOrderIds = allFeedback.map((f) => f.order_id);
+        const fbOrderIds = allFeedback.map((f: any) => f.order_id);
         const { data: fbOrderItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_item_id, order_id")
-          .in("order_id", fbOrderIds);
+          .in("order_id", fbOrderIds)
+          .limit(100);
 
         if (fbOrderItems && fbOrderItems.length > 0) {
           const itemRatings: Record<string, { sum: number; count: number }> = {};
           for (const fboi of fbOrderItems) {
-            const fb = allFeedback.find((f) => f.order_id === fboi.order_id);
+            const fb = allFeedback.find((f: any) => f.order_id === fboi.order_id);
             if (fb && fb.rating != null) {
               if (!itemRatings[fboi.menu_item_id])
                 itemRatings[fboi.menu_item_id] = { sum: 0, count: 0 };
@@ -606,15 +623,18 @@ IMPORTANT RULES:
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       const { data: recentOrders } = await supabaseAdmin
         .from("orders")
-        .select("id")
-        .gte("created_at", oneWeekAgo.toISOString());
+        .select("id, sessions!inner(tables!inner(restaurant_id))")
+        .eq("sessions.tables.restaurant_id", scope.restaurantId)
+        .gte("created_at", oneWeekAgo.toISOString())
+        .limit(50);
 
       if (recentOrders && recentOrders.length > 0) {
         const recentOrderIds = recentOrders.map((o) => o.id);
         const { data: recentItems } = await supabaseAdmin
           .from("order_items")
           .select("menu_item_id")
-          .in("order_id", recentOrderIds);
+          .in("order_id", recentOrderIds)
+          .limit(100);
 
         if (recentItems && recentItems.length > 0) {
           const counts: Record<string, number> = {};

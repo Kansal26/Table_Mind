@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -55,12 +56,9 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
     if (rError) throw rError;
 
     // 3. Create tables
-    const shortRestId = restaurant.id!.substring(0, 8);
     const tablesToInsert = [];
     for (let i = 1; i <= data.numTables; i++) {
-      // Use a short random string appended to make it globally unique yet short
-      const randomSlug = Math.random().toString(36).substring(2, 8);
-      const qrToken = `${shortRestId}-t${i}-${randomSlug}`;
+      const qrToken = crypto.randomBytes(16).toString("base64url");
 
       tablesToInsert.push({
         restaurant_id: restaurant.id,

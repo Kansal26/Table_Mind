@@ -108,7 +108,7 @@ export const generateAndSendOtpFn = createServerFn({ method: "POST" })
     const user = await verifyAdminAuth(data.token);
 
     // Rate limit: max 3 OTP requests per user per purpose per hour
-    rateLimit(user.id, `otp_${data.purpose}`, 3, 60 * 60 * 1000);
+    await rateLimit(user.id, `otp_${data.purpose}`, 3, 60 * 60 * 1000);
 
     // Invalidate previous unused OTPs for this purpose
     await supabaseAdmin
@@ -161,6 +161,9 @@ export const verifyOtpFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
 
+    // Rate limit: max 10 verify attempts per user per 15 minutes
+    await rateLimit(user.id, `verify_otp_${data.purpose}`, 10, 15 * 60 * 1000);
+
     // Find the most recent unconsumed, unused OTP for this user+purpose
     const { data: otps, error } = await supabaseAdmin
       .from("otp_verifications")
@@ -205,11 +208,11 @@ export const verifyOtpFn = createServerFn({ method: "POST" })
 
     // Atomically increment attempts to prevent parallel guess races
     let newAttempts = otp.attempts + 1;
-    const { data: rpcAttempts, error: rpcErr } = await supabaseAdmin.rpc("increment_otp_attempts", {
+    const rpcRes = await supabaseAdmin.rpc("increment_otp_attempts", {
       p_otp_id: otp.id,
     });
-    if (!rpcErr && typeof rpcAttempts === "number") {
-      newAttempts = rpcAttempts;
+    if (rpcRes && !rpcRes.error && typeof rpcRes.data === "number") {
+      newAttempts = rpcRes.data;
     } else {
       await supabaseAdmin
         .from("otp_verifications")

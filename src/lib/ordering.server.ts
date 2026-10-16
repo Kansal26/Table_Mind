@@ -23,7 +23,7 @@ export async function requireSessionScope(qrToken: string): Promise<SessionScope
   const { data: table, error } = await supabaseAdmin
     .from("tables")
     .select("id, restaurant_id")
-    .ilike("qr_token", token)
+    .eq("qr_token", token)
     .maybeSingle();
   if (error) throw error;
   if (!table) return null;
@@ -88,7 +88,7 @@ export async function resolveTableId(qrToken: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("tables")
     .select("id")
-    .ilike("qr_token", token)
+    .eq("qr_token", token)
     .maybeSingle();
   if (error) throw error;
   return data?.id ?? null;
@@ -243,8 +243,20 @@ export async function recalcTotals(orderId: string) {
     }
   }
 
+  let taxRate = 0.05;
+  if (restaurantId) {
+    const { data: restData } = await supabaseAdmin
+      .from("restaurants")
+      .select("tax_rate")
+      .eq("id", restaurantId)
+      .maybeSingle();
+    if (restData && typeof (restData as any).tax_rate === "number") {
+      taxRate = Number((restData as any).tax_rate);
+    }
+  }
+
   const taxableAmount = Math.max(0, subtotal - appliedDiscount - creditsApplied);
-  const tax = Math.round(taxableAmount * TAX_RATE * 100) / 100;
+  const tax = Math.round(taxableAmount * taxRate * 100) / 100;
   const total = Math.max(0, Math.round((taxableAmount + tax) * 100) / 100);
 
   const { error } = await supabaseAdmin

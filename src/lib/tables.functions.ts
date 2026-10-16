@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -57,11 +58,7 @@ export const createTableFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const user = await requireRestaurantOwnership(data.token, data.restaurantId);
-    rateLimit(user.id, "createTable", 50, 15 * 60 * 1000);
-
-    const shortRestId = data.restaurantId.substring(0, 8);
-    const randomSlug = Math.random().toString(36).substring(2, 8);
-    const qrToken = `${shortRestId}-t-${randomSlug}`;
+    const qrToken = crypto.randomBytes(16).toString("base64url");
 
     const { error } = await supabaseAdmin.from("tables").insert({
       restaurant_id: data.restaurantId,
@@ -72,5 +69,29 @@ export const createTableFn = createServerFn({ method: "POST" })
     });
 
     if (error) throw error;
-    return { ok: true };
+    return { ok: true, qrToken };
+  });
+
+export const regenerateQrTokenFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({ token: z.string(), tableId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { data: table } = await supabaseAdmin
+      .from("tables")
+      .select("restaurant_id")
+      .eq("id", data.tableId)
+      .single();
+    if (!table) throw new Error("Table not found");
+    const user = await requireRestaurantOwnership(data.token, table.restaurant_id);
+    await rateLimit(user.id, "regenerateQrToken", 50, 15 * 60 * 1000);
+
+    const newQrToken = crypto.randomBytes(16).toString("base64url");
+    const { error } = await supabaseAdmin
+      .from("tables")
+      .update({ qr_token: newQrToken })
+      .eq("id", data.tableId);
+
+    if (error) throw error;
+    return { ok: true, qrToken: newQrToken };
   });

@@ -17,6 +17,10 @@ export const callWaiterFn = createServerFn({ method: "POST" })
     const tableId = await resolveTableId(data.qrToken);
     if (!tableId) throw new Error("Table not found or invalid token.");
 
+    const { getClientIdentifier, rateLimit } = await import("./rate-limit.server");
+    const clientId = getClientIdentifier();
+    await rateLimit(clientId, "callWaiter", 5, 5 * 60 * 1000);
+
     // Get open session and restaurant_id
     const { data: tableData } = await supabaseAdmin
       .from("tables")
