@@ -205,6 +205,9 @@ export type Database = {
           guest_email: string | null;
           kitchen_status: string | null;
           discount_amount: number | null;
+          razorpay_order_id: string | null;
+          amount_paise: number | null;
+          razorpay_payment_id: string | null;
         };
         Insert: {
           created_at?: string;
@@ -221,6 +224,9 @@ export type Database = {
           guest_email?: string | null;
           kitchen_status?: string | null;
           discount_amount?: number | null;
+          razorpay_order_id?: string | null;
+          amount_paise?: number | null;
+          razorpay_payment_id?: string | null;
         };
         Update: {
           created_at?: string;
@@ -237,6 +243,9 @@ export type Database = {
           guest_email?: string | null;
           kitchen_status?: string | null;
           discount_amount?: number | null;
+          razorpay_order_id?: string | null;
+          amount_paise?: number | null;
+          razorpay_payment_id?: string | null;
         };
         Relationships: [
           {
@@ -706,6 +715,16 @@ export type Database = {
           owner_id_param: string;
         };
         Returns: undefined;
+      };
+      complete_payment: {
+        Args: {
+          p_order_id: string;
+          p_razorpay_payment_id: string | null;
+          p_points_to_deduct?: number;
+          p_user_id?: string | null;
+          p_restaurant_id?: string | null;
+        };
+        Returns: number;
       };
     };
     Enums: {

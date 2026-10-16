@@ -751,39 +751,42 @@ export const payOrderFn = createServerFn({ method: "POST" })
 
     await recalcTotals(order.id);
 
-    // Fetch the updated order to get the final credits_applied
-    const { data: updatedOrder } = await supabaseAdmin
+    // Re-fetch order to get recalculated total
+    const { data: recalced } = await supabaseAdmin
       .from("orders")
       .select(
-        "credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))",
+        "total, credits_applied, points_redeemed, user_id, session_id, sessions!inner(tables!inner(restaurant_id))",
       )
       .eq("id", order.id)
       .single();
 
-    const pts1 = updatedOrder?.points_redeemed ?? 0;
-    if (updatedOrder && pts1 > 0 && updatedOrder.user_id) {
-      const { deductWallet } = await import("./wallet.server");
-      await deductWallet(
-        updatedOrder.user_id,
-        pts1,
-        "Redeemed on order",
-        order.id,
-        (updatedOrder as any).sessions.tables.restaurant_id,
+    if (!recalced) throw new Error("Order not found after recalculation.");
+
+    // SECURITY: payOrderFn is the non-Razorpay path. It may only mark orders
+    // paid when the total is exactly 0 (fully covered by credits/coupons).
+    const recalcTotal = Number(recalced.total);
+    if (recalcTotal !== 0) {
+      throw new Error(
+        "This order has a non-zero balance. Please use Razorpay to complete payment.",
       );
     }
 
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: "paid" })
-      .eq("id", order.id)
-      .eq("session_id", order.session_id);
-    if (error) throw error;
+    const redeemedPoints = recalced.points_redeemed ?? 0;
+    const restaurantId = (recalced as any).sessions.tables.restaurant_id;
 
-    const { error: sessionError } = await supabaseAdmin
-      .from("sessions")
-      .update({ status: "closed" })
-      .eq("id", order.session_id);
-    if (sessionError) throw sessionError;
+    // Use the atomic Postgres function to flip the order to paid,
+    // deduct loyalty points, and close the session in one transaction.
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc("complete_payment", {
+      p_order_id: order.id,
+      p_razorpay_payment_id: null,
+      p_points_to_deduct: redeemedPoints,
+      p_user_id: recalced.user_id ?? null,
+      p_restaurant_id: restaurantId ?? null,
+    });
+    if (rpcError) throw rpcError;
+
+    // rpcResult === 0 means already paid (race condition, safe to ignore)
+    if (rpcResult === 0) return { ok: true };
 
     // Trigger email notification for owner (and guest if provided)
     if (data.guestEmail) {
@@ -825,7 +828,7 @@ export const payOrderFn = createServerFn({ method: "POST" })
         const restaurant = table.restaurants;
         const ownerId = restaurant?.owner_id;
 
-        const items = orderData.order_items.map((oi: any) => ({
+        const items = (orderData.order_items || []).map((oi: any) => ({
           name: oi.menu_items?.name || "Unknown Item",
           qty: oi.qty,
           customizations: oi.customizations,
@@ -880,7 +883,8 @@ export const payOrderFn = createServerFn({ method: "POST" })
 export const createRazorpayOrderFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => orderSchema.parse(data))
   .handler(async ({ data }) => {
-    const { resolveTableId, requireOwnedOrder } = await import("./ordering.server");
+    const { resolveTableId, requireOwnedOrder, recalcTotals } = await import("./ordering.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const tableId = await resolveTableId(data.qrToken);
     if (!tableId) throw new Error("This table code is no longer active.");
@@ -889,7 +893,21 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     if (!order) throw new Error("We couldn't find that bill.");
     if (order.status === "paid") throw new Error("Order already paid.");
 
-    const amountPaise = Math.round(Number(order.total) * 100);
+    // Re-price the order so we always use the latest cart contents
+    await recalcTotals(order.id);
+
+    // Fetch the freshly calculated total
+    const { data: freshOrder, error: freshErr } = await supabaseAdmin
+      .from("orders")
+      .select("total")
+      .eq("id", order.id)
+      .single();
+    if (freshErr) throw freshErr;
+    if (!freshOrder || freshOrder.total === undefined || freshOrder.total === null) {
+      throw new Error("Unable to load order total.");
+    }
+
+    const amountPaise = Math.round(Number(freshOrder.total) * 100);
     if (amountPaise < 100) throw new Error("Amount must be at least ₹1.00");
 
     const keyId = process.env["VITE_RAZORPAY_KEY_ID"] || process.env["RAZORPAY_KEY_ID"];
@@ -915,6 +933,19 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
 
     try {
       const rpOrder = await razorpay.orders.create(options);
+
+      // Store the Razorpay order ID and locked amount on the order row.
+      // If the cart changes later, a new createRazorpayOrder call will overwrite
+      // these values, and verification against the old amount will fail.
+      const { error: storeErr } = await supabaseAdmin
+        .from("orders")
+        .update({
+          razorpay_order_id: rpOrder.id as string,
+          amount_paise: amountPaise,
+        })
+        .eq("id", order.id);
+      if (storeErr) throw storeErr;
+
       return {
         order_id: rpOrder.id as string,
         amount: rpOrder.amount as number,
@@ -943,62 +974,99 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       return { ok: true };
     }
 
-    try {
-      const body = data.razorpay_order_id + "|" + data.razorpay_payment_id;
-      const crypto = await import("crypto");
-      const expectedSignature = crypto
-        .createHmac("sha256", process.env["RAZORPAY_KEY_SECRET"] as string)
-        .update(body.toString())
-        .digest("hex");
+    // --- (a) Verify the Razorpay order ID matches the one stored on THIS order ---
+    const { data: storedOrder, error: storedErr } = await supabaseAdmin
+      .from("orders")
+      .select("razorpay_order_id, amount_paise")
+      .eq("id", order.id)
+      .single();
+    if (storedErr) throw storedErr;
 
-      if (expectedSignature !== data.razorpay_signature) {
-        throw new Error("Invalid signature. Payment verification failed.");
-      }
-    } catch (e) {
-      console.error("Signature verification failed:", e);
-      throw e;
+    if (!storedOrder?.razorpay_order_id) {
+      throw new Error("No Razorpay order was created for this order. Please start checkout again.");
+    }
+    if (storedOrder.razorpay_order_id !== data.razorpay_order_id) {
+      throw new Error(
+        "Razorpay order ID mismatch. The cart may have changed — please start checkout again.",
+      );
     }
 
-    try {
-      await recalcTotals(order.id);
+    // --- (b) HMAC signature verification using timingSafeEqual ---
+    const keySecret = process.env["RAZORPAY_KEY_SECRET"];
+    if (!keySecret) throw new Error("Missing RAZORPAY_KEY_SECRET.");
 
-      // Fetch the updated order to get the final credits_applied
-      const { data: updatedOrder } = await supabaseAdmin
-        .from("orders")
-        .select(
-          "credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))",
-        )
-        .eq("id", order.id)
-        .single();
-      const earnedPoints = updatedOrder?.points_redeemed ?? 0;
-      if (updatedOrder && earnedPoints > 0 && updatedOrder.user_id) {
-        const { deductWallet } = await import("./wallet.server");
-        await deductWallet(
-          updatedOrder.user_id,
-          earnedPoints,
-          "Redeemed on order",
-          order.id,
-          (updatedOrder as any).sessions.tables.restaurant_id,
-        );
-      }
+    const body = data.razorpay_order_id + "|" + data.razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(body)
+      .digest("hex");
 
-      const { error } = await supabaseAdmin
-        .from("orders")
-        .update({ status: "paid" })
-        .eq("id", order.id)
-        .eq("session_id", order.session_id);
-      if (error) throw error;
+    const sigBuffer = Buffer.from(data.razorpay_signature, "hex");
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
 
-      const { error: sessionError } = await supabaseAdmin
-        .from("sessions")
-        .update({ status: "closed" })
-        .eq("id", order.session_id);
-      if (sessionError) throw sessionError;
-    } catch (e) {
-      console.error("Updating order status failed:", e);
-      throw e;
+    if (
+      sigBuffer.length !== expectedBuffer.length ||
+      !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+    ) {
+      throw new Error("Invalid signature. Payment verification failed.");
     }
 
+    // --- (c) Server-side fetch from Razorpay API to confirm payment ---
+    const keyId = process.env["VITE_RAZORPAY_KEY_ID"] || process.env["RAZORPAY_KEY_ID"];
+    if (!keyId) throw new Error("Missing RAZORPAY_KEY_ID.");
+
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+    let rpPayment: any;
+    try {
+      rpPayment = await razorpay.payments.fetch(data.razorpay_payment_id);
+    } catch (e: any) {
+      console.error("Razorpay payment fetch failed:", e);
+      throw new Error("Unable to verify payment with Razorpay.");
+    }
+
+    // Payment must be captured or authorized
+    if (rpPayment.status !== "captured" && rpPayment.status !== "authorized") {
+      throw new Error(`Payment status is '${rpPayment.status}', not captured/authorized.`);
+    }
+    // Amount must match the locked amount
+    if (Number(rpPayment.amount) !== storedOrder.amount_paise) {
+      throw new Error(
+        "Payment amount does not match the order. The cart may have changed — please start checkout again.",
+      );
+    }
+    // The payment's order_id must match
+    if (rpPayment.order_id !== storedOrder.razorpay_order_id) {
+      throw new Error("Payment was made against a different Razorpay order.");
+    }
+
+    // --- (d) + (e) Atomic payment completion via Postgres function ---
+    await recalcTotals(order.id);
+
+    const { data: updatedOrder } = await supabaseAdmin
+      .from("orders")
+      .select(
+        "credits_applied, points_redeemed, user_id, sessions!inner(tables!inner(restaurant_id))",
+      )
+      .eq("id", order.id)
+      .single();
+
+    const redeemedPoints = updatedOrder?.points_redeemed ?? 0;
+    const restaurantId = (updatedOrder as any)?.sessions?.tables?.restaurant_id ?? null;
+
+    // Atomic: lock row, flip to paid, deduct loyalty, close session
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc("complete_payment", {
+      p_order_id: order.id,
+      p_razorpay_payment_id: data.razorpay_payment_id,
+      p_points_to_deduct: redeemedPoints,
+      p_user_id: updatedOrder?.user_id ?? null,
+      p_restaurant_id: restaurantId,
+    });
+    if (rpcError) throw rpcError;
+
+    // rpcResult === 0 → already paid by a concurrent call (safe idempotent return)
+    if (rpcResult === 0) return { ok: true };
+
+    // --- Email notifications (best-effort, errors are logged not thrown) ---
     try {
       const { sendNewOrderNotification, sendGuestReceiptEmail } = await import("./email.server");
 
@@ -1054,8 +1122,6 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
             });
 
             if (data.guestEmail) {
-              // We need to fetch credits_applied and tax which aren't in `order` var natively here, or wait `order` is fetched at the top via `requireOwnedOrder` which has `total`, `subtotal`, `tax`, `discount_amount`, `credits_applied`
-              // The `order` object from `requireOwnedOrder` has `total`, `subtotal`, `tax`, `discount_amount`, `credits_applied`.
               await sendGuestReceiptEmail({
                 guestEmail: data.guestEmail,
                 restaurantName: restData.name || "Restaurant",
@@ -1074,7 +1140,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       }
     } catch (e) {
       console.error("Email fetching/sending failed:", e);
-      throw e;
+      // Don't throw — payment is already completed
     }
 
     return { ok: true };
