@@ -326,7 +326,9 @@ export const getRecommendationsFn = createServerFn({ method: "POST" })
         const { data: authData } = await supabaseAdmin.auth.getUser(token);
         userId = authData.user?.id ?? null;
       }
-    } catch (e) {}
+    } catch {
+      // Ignore auth extraction error in optional auth context
+    }
 
     if (!userId) return [];
 
@@ -1025,10 +1027,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
     if (!keySecret) throw new Error("Missing RAZORPAY_KEY_SECRET.");
 
     const body = data.razorpay_order_id + "|" + data.razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac("sha256", keySecret)
-      .update(body)
-      .digest("hex");
+    const expectedSignature = crypto.createHmac("sha256", keySecret).update(body).digest("hex");
 
     const sigBuffer = Buffer.from(data.razorpay_signature, "hex");
     const expectedBuffer = Buffer.from(expectedSignature, "hex");

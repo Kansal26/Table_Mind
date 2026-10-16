@@ -18,7 +18,7 @@ export function escapeHtml(str: string | null | undefined): string {
 interface OrderItem {
   name: string;
   qty: number;
-  customizations?: any;
+  customizations?: { notes?: string } | string | null;
 }
 
 export function emailLayout({
@@ -202,9 +202,10 @@ export async function sendNewOrderNotification(params: {
   const items = orderItems.map((item) => {
     let customText = "";
     if (item.customizations && typeof item.customizations === "object") {
-      const keys = Object.keys(item.customizations);
+      const customObj = item.customizations as Record<string, unknown>;
+      const keys = Object.keys(customObj);
       if (keys.length > 0) {
-        customText = keys.map((k) => item.customizations[k]).join(", ");
+        customText = keys.map((k) => String(customObj[k] ?? "")).join(", ");
       }
     } else if (typeof item.customizations === "string") {
       customText = item.customizations;
@@ -290,9 +291,10 @@ export async function sendGuestReceiptEmail(params: {
   const items = orderItems.map((item) => {
     let customText = "";
     if (item.customizations && typeof item.customizations === "object") {
-      const keys = Object.keys(item.customizations);
+      const customObj = item.customizations as Record<string, unknown>;
+      const keys = Object.keys(customObj);
       if (keys.length > 0) {
-        customText = keys.map((k) => item.customizations[k]).join(", ");
+        customText = keys.map((k) => String(customObj[k] ?? "")).join(", ");
       }
     } else if (typeof item.customizations === "string") {
       customText = item.customizations;

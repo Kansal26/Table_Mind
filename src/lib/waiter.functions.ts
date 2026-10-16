@@ -73,7 +73,7 @@ export const fetchAdminWaiterCallsFn = createServerFn({ method: "POST" })
     await requireRestaurantOwnership(data.token, data.restaurantId);
 
     const { data: calls, error } = await supabaseAdmin
-      .from("waiter_calls" as any)
+      .from("waiter_calls")
       .select("id, status, reason, created_at, tables(label)")
       .eq("restaurant_id", data.restaurantId)
       .in("status", ["pending", "acknowledged"])
@@ -81,12 +81,12 @@ export const fetchAdminWaiterCallsFn = createServerFn({ method: "POST" })
 
     if (error) throw error;
 
-    return (calls || []).map((c: any) => ({
+    return (calls || []).map((c) => ({
       id: c.id,
-      status: c.status,
+      status: c.status || "pending",
       reason: c.reason,
       created_at: c.created_at,
-      table_label: c.tables?.label,
+      table_label: c.tables?.label ?? undefined,
     }));
   });
 
@@ -100,8 +100,8 @@ export const acknowledgeWaiterCallFn = createServerFn({ method: "POST" })
     await requireRestaurantOwnership(data.token, data.restaurantId);
 
     const { error } = await supabaseAdmin
-      .from("waiter_calls" as any)
-      .update({ status: "acknowledged", acknowledged_at: new Date().toISOString() })
+      .from("waiter_calls")
+      .update({ status: "acknowledged" })
       .eq("id", data.callId)
       .eq("restaurant_id", data.restaurantId);
 
@@ -119,7 +119,7 @@ export const resolveWaiterCallFn = createServerFn({ method: "POST" })
     await requireRestaurantOwnership(data.token, data.restaurantId);
 
     const { error } = await supabaseAdmin
-      .from("waiter_calls" as any)
+      .from("waiter_calls")
       .update({ status: "resolved", resolved_at: new Date().toISOString() })
       .eq("id", data.callId)
       .eq("restaurant_id", data.restaurantId);

@@ -28,14 +28,13 @@ interface SpeechRecognition extends EventTarget {
   onerror: (event: any) => void;
   onend: () => void;
 }
-declare var webkitSpeechRecognition: {
-  prototype: SpeechRecognition;
-  new (): SpeechRecognition;
-};
-declare var SpeechRecognition: {
-  prototype: SpeechRecognition;
-  new (): SpeechRecognition;
-};
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+    SpeechRecognition?: new () => SpeechRecognition;
+  }
+}
 
 export function VoiceOrder({
   qrToken,
@@ -50,6 +49,7 @@ export function VoiceOrder({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stopRecordingRef = useRef<(text: string) => void>(() => {});
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [parsedOrder, setParsedOrder] = useState<VoiceOrderResponse | null>(null);
@@ -95,7 +95,7 @@ export function VoiceOrder({
       // Reset silence timer
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = setTimeout(() => {
-        stopRecording(currentText);
+        stopRecordingRef.current(currentText);
       }, 2000);
     };
 
@@ -139,6 +139,7 @@ export function VoiceOrder({
     },
     [parseMutation],
   );
+  stopRecordingRef.current = stopRecording;
 
   const toggleRecording = () => {
     setErrorMsg(null);

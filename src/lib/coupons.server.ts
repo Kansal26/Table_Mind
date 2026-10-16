@@ -21,7 +21,7 @@ export type Coupon = {
 // Returns eligible coupons and their potential discount amount
 export async function evaluateCoupons(
   orderId: string,
-  lines: any[],
+  lines: Array<{ menu_item: { id: string; price: number }; qty: number }>,
   subtotal: number,
 ): Promise<Array<Coupon & { calculated_discount: number }>> {
   // Load order
@@ -31,13 +31,14 @@ export async function evaluateCoupons(
     .eq("id", orderId)
     .single();
 
-  if (!order || !order.session || !(order.session as any).tables) return [];
-  const restaurantId = (order.session as any).tables.restaurant_id;
+  const session = order?.session as { tables?: { restaurant_id?: string } } | null;
+  if (!order || !session?.tables?.restaurant_id) return [];
+  const restaurantId = session.tables.restaurant_id;
 
   if (subtotal === 0) return []; // No discounts on empty cart
 
   // Fetch all active coupons for this restaurant
-  const { data: couponsData } = await (supabaseAdmin as any)
+  const { data: couponsData } = await supabaseAdmin
     .from("coupons")
     .select("*")
     .eq("restaurant_id", restaurantId)
@@ -45,7 +46,7 @@ export async function evaluateCoupons(
 
   if (!couponsData || couponsData.length === 0) return [];
 
-  const coupons = couponsData as any as Coupon[];
+  const coupons = couponsData as unknown as Coupon[];
   const eligible: Array<Coupon & { calculated_discount: number }> = [];
   const now = new Date();
 
@@ -89,7 +90,7 @@ export async function evaluateCoupons(
         }
         break;
 
-      case "item_specific":
+      case "item_specific": {
         const targetItem = lines.find((l) => l.menu_item.id === rule.item_id);
         if (targetItem) {
           isEligible = true;
@@ -97,8 +98,9 @@ export async function evaluateCoupons(
           discountAmount = targetItem.menu_item.price * targetItem.qty * (rule.discount_pct / 100);
         }
         break;
+      }
 
-      case "time_window":
+      case "time_window": {
         // Check if current IST time is within start and end
         const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
@@ -120,6 +122,7 @@ export async function evaluateCoupons(
           discountAmount = subtotal * (rule.discount_pct / 100);
         }
         break;
+      }
     }
 
     if (isEligible && discountAmount > 0) {

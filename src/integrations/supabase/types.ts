@@ -667,7 +667,15 @@ export type Database = {
           status?: string | null;
           table_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "waiter_calls_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "tables";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       otp_verifications: {
         Row: {

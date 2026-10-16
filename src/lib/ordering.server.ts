@@ -198,7 +198,15 @@ export async function recalcTotals(orderId: string) {
     console.error("Error fetching order in recalcTotals:", orderErr);
     throw orderErr;
   }
-  const restaurantId = (order as any).sessions?.tables?.restaurant_id;
+  const restaurantId = (
+    order as unknown as {
+      sessions?: {
+        tables?: {
+          restaurant_id?: string;
+        };
+      };
+    }
+  ).sessions?.tables?.restaurant_id;
 
   let creditsApplied = 0;
   let finalPointsRedeemed = order?.points_redeemed || 0;
@@ -250,8 +258,8 @@ export async function recalcTotals(orderId: string) {
       .select("tax_rate")
       .eq("id", restaurantId)
       .maybeSingle();
-    if (restData && typeof (restData as any).tax_rate === "number") {
-      taxRate = Number((restData as any).tax_rate);
+    if (restData && typeof restData.tax_rate === "number") {
+      taxRate = Number(restData.tax_rate);
     }
   }
 

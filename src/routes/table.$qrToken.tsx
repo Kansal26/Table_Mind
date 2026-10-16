@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Minus, Plus, ShoppingBag, Users, Bell } from "lucide-react";
@@ -416,6 +416,11 @@ function TableMenuPage() {
     enabled: !!ctx && !!deviceToken,
   });
 
+  const invalidateCart = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["cart", qrToken, ctx?.sessionId] }),
+    [queryClient, qrToken, ctx?.sessionId],
+  );
+
   useEffect(() => {
     if (!ctx?.sessionId) return;
     const orderId = cartQuery.data?.order?.id;
@@ -484,16 +489,20 @@ function TableMenuPage() {
       supabase.removeChannel(participantsChannel);
       supabase.removeChannel(orderChannel);
     };
-  }, [ctx?.sessionId, cartQuery.data?.order?.id, deviceToken, queryClient, qrToken]);
+  }, [
+    ctx?.sessionId,
+    cartQuery.data?.order?.id,
+    deviceToken,
+    queryClient,
+    qrToken,
+    invalidateCart,
+  ]);
 
   const recQuery = useQuery({
     queryKey: ["recommendations", qrToken],
     queryFn: () => getRecommendations(qrToken),
     enabled: !!ctx && !!user,
   });
-
-  const invalidateCart = () =>
-    queryClient.invalidateQueries({ queryKey: ["cart", qrToken, ctx?.sessionId] });
 
   const addMutation = useMutation({
     mutationFn: (input: {

@@ -72,15 +72,31 @@ vi.mock("./ordering.server", () => ({
 
 vi.mock("./wallet.server", () => ({
   getWalletBalance: vi.fn().mockResolvedValue(500),
-  processFeedbackSubmission: vi.fn().mockResolvedValue({ creditEarned: 50, pointsValue: 50, isLoyaltyEnabled: true }),
+  processFeedbackSubmission: vi
+    .fn()
+    .mockResolvedValue({ creditEarned: 50, pointsValue: 50, isLoyaltyEnabled: true }),
 }));
 
 // Helper to construct fluent query mocks
 function chainMock(result: any, error: any = null) {
   const chain: any = {};
   for (const method of [
-    "select", "insert", "update", "delete", "eq", "neq", "in", "gt", "lt",
-    "gte", "lte", "order", "limit", "ilike", "not", "or"
+    "select",
+    "insert",
+    "update",
+    "delete",
+    "eq",
+    "neq",
+    "in",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "order",
+    "limit",
+    "ilike",
+    "not",
+    "or",
   ]) {
     chain[method] = vi.fn().mockReturnValue(chain);
   }

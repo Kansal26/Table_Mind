@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import { verifyAdminAuth, requireRestaurantOwnership } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
+
+type MenuItemUpdate = Database["public"]["Tables"]["menu_items"]["Update"];
+type MenuItemInsert = Database["public"]["Tables"]["menu_items"]["Insert"];
 
 export const fetchAdminMenuFn = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
@@ -62,7 +66,7 @@ export const upsertMenuItemFn = createServerFn({ method: "POST" })
       const { token, id, restaurant_id, ...updateData } = data;
       const { error } = await supabaseAdmin
         .from("menu_items")
-        .update(updateData as any)
+        .update(updateData as unknown as MenuItemUpdate)
         .eq("id", data.id);
       if (error) throw error;
     } else {
@@ -70,7 +74,9 @@ export const upsertMenuItemFn = createServerFn({ method: "POST" })
       rateLimit(user.id, "upsertMenuItem", 100, 15 * 60 * 1000);
 
       const { token, ...insertData } = data;
-      const { error } = await supabaseAdmin.from("menu_items").insert(insertData as any);
+      const { error } = await supabaseAdmin
+        .from("menu_items")
+        .insert(insertData as unknown as MenuItemInsert);
       if (error) throw error;
     }
     return { ok: true };

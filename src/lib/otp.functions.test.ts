@@ -59,8 +59,23 @@ function chainMock(result: any, error: any = null) {
       Promise.resolve({ data: result, error }).then(resolve, reject),
   };
   for (const method of [
-    "select", "insert", "update", "delete", "eq", "neq", "in", "gt", "lt",
-    "gte", "lte", "order", "limit", "ilike", "not", "or", "is"
+    "select",
+    "insert",
+    "update",
+    "delete",
+    "eq",
+    "neq",
+    "in",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "order",
+    "limit",
+    "ilike",
+    "not",
+    "or",
+    "is",
   ]) {
     chain[method] = vi.fn().mockReturnValue(chain);
   }
@@ -96,9 +111,9 @@ describe("Phase 4: Server-Side OTP Enforcement & Two-Stage Verification", () => 
 
       const { deactivateAccountFn } = await import("./security.functions");
 
-      await expect(
-        deactivateAccountFn({ data: { token: TOKEN } }),
-      ).rejects.toThrow("403: Forbidden. Validated OTP required.");
+      await expect(deactivateAccountFn({ data: { token: TOKEN } })).rejects.toThrow(
+        "403: Forbidden. Validated OTP required.",
+      );
     });
 
     it("deleteAccountFn: rejects when no verified OTP exists", async () => {
@@ -106,9 +121,9 @@ describe("Phase 4: Server-Side OTP Enforcement & Two-Stage Verification", () => 
 
       const { deleteAccountFn } = await import("./security.functions");
 
-      await expect(
-        deleteAccountFn({ data: { token: TOKEN } }),
-      ).rejects.toThrow("403: Forbidden. Validated OTP required.");
+      await expect(deleteAccountFn({ data: { token: TOKEN } })).rejects.toThrow(
+        "403: Forbidden. Validated OTP required.",
+      );
     });
 
     it("changePasswordFn: rejects when no verified OTP exists", async () => {
@@ -204,9 +219,7 @@ describe("Phase 4: Server-Side OTP Enforcement & Two-Stage Verification", () => 
 
       const selectChain = chainMock([maxedOtp]);
       const updateChain = chainMock(null);
-      mockSupabase.from
-        .mockReturnValueOnce(selectChain)
-        .mockReturnValueOnce(updateChain);
+      mockSupabase.from.mockReturnValueOnce(selectChain).mockReturnValueOnce(updateChain);
 
       const { verifyOtpFn } = await import("./otp.functions");
 
@@ -268,9 +281,7 @@ describe("Phase 4: Server-Side OTP Enforcement & Two-Stage Verification", () => 
       const selectChain = chainMock([activeOtp]);
       const verifySuccessChain = chainMock(null);
 
-      mockSupabase.from
-        .mockReturnValueOnce(selectChain)
-        .mockReturnValueOnce(verifySuccessChain);
+      mockSupabase.from.mockReturnValueOnce(selectChain).mockReturnValueOnce(verifySuccessChain);
 
       mockSupabase.rpc.mockResolvedValueOnce({ data: 1, error: null });
 

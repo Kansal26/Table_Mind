@@ -106,13 +106,13 @@ RULES:
     const rawItems = Array.isArray(rawData) ? rawData : rawData.parsed_items || [];
 
     // Sanitize quantities, confidences, and customizations
-    const sanitizedItems = rawItems.map((item: any) => ({
+    const sanitizedItems = rawItems.map((item: Record<string, unknown>) => ({
       ...item,
       quantity:
-        typeof item.quantity === "string" ? parseInt(item.quantity, 10) || 1 : item.quantity,
+        typeof item["quantity"] === "string" ? parseInt(item["quantity"], 10) || 1 : item["quantity"],
       confidence:
-        typeof item.confidence === "string" ? parseFloat(item.confidence) || 1 : item.confidence,
-      customizations: item.customizations ?? null,
+        typeof item["confidence"] === "string" ? parseFloat(item["confidence"]) || 1 : item["confidence"],
+      customizations: item["customizations"] ?? null,
     }));
 
     // Validate with voiceOrderSchema
@@ -131,7 +131,7 @@ RULES:
       parsed_items: restaurantScopedItems,
       clarification_needed: validated.clarification_needed ?? null,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("LLM Call Failed or Timed Out:", err);
     throw err;
   }

@@ -503,7 +503,12 @@ export const exportCouponsFn = createServerFn({ method: "POST" })
           const key = c.name || c.id;
           const couponType = c.rule_json?.type || "general";
           if (!couponStats[key]) {
-            couponStats[key] = { name: c.name || "Coupon", type: couponType, redeemed: 0, totalDiscount: 0 };
+            couponStats[key] = {
+              name: c.name || "Coupon",
+              type: couponType,
+              redeemed: 0,
+              totalDiscount: 0,
+            };
           }
           couponStats[key].redeemed += 1;
           couponStats[key].totalDiscount += Number(d.discount_amount || 0);

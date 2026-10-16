@@ -20,7 +20,7 @@ function CallbackPage() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
         const safeRedirect =
-          search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+          search.redirect && /^\/[a-zA-Z0-9/_-]*$/.test(search.redirect) ? search.redirect : null;
         if (safeRedirect) {
           navigate({ to: safeRedirect as any, replace: true });
         } else {

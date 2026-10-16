@@ -172,7 +172,11 @@ describe("Phase 6: Hardening", () => {
             }),
           };
         }
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), update: vi.fn().mockReturnThis() };
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+        };
       });
 
       let updatedTax = 0;
@@ -343,7 +347,7 @@ describe("Phase 6: Hardening", () => {
           : currentMinutes >= startMinutes || currentMinutes <= endMinutes;
 
       expect(checkInWindow(23 * 60)).toBe(true); // 23:00 -> in window
-      expect(checkInWindow(2 * 60)).toBe(true);  // 02:00 -> in window
+      expect(checkInWindow(2 * 60)).toBe(true); // 02:00 -> in window
       expect(checkInWindow(12 * 60)).toBe(false); // 12:00 -> outside window
     });
   });

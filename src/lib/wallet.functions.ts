@@ -144,9 +144,7 @@ export const getWalletBalanceFn = createServerFn({ method: "POST" })
 
 export const getLoyaltyDataFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) =>
-    z.object({ qrToken: z.string().min(1).max(200) }).parse(data),
-  )
+  .validator((data: unknown) => z.object({ qrToken: z.string().min(1).max(200) }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getWalletBalance } = await import("./wallet.server");

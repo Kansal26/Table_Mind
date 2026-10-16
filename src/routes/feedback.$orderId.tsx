@@ -103,19 +103,6 @@ function FeedbackPage() {
     },
   });
 
-  if (
-    existsQuery.isLoading ||
-    orderQuery.isLoading ||
-    existsQuery.data?.exists ||
-    (user && loyaltyQuery.isLoading)
-  ) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="size-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   const selectedQuestions = useMemo(() => {
     const lines = orderQuery.data?.lines || [];
     const hasSpicy = lines.some(
@@ -208,6 +195,19 @@ function FeedbackPage() {
 
     return questions;
   }, [orderQuery.data?.lines]);
+
+  if (
+    existsQuery.isLoading ||
+    orderQuery.isLoading ||
+    existsQuery.data?.exists ||
+    (user && loyaltyQuery.isLoading)
+  ) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const settings = loyaltyQuery.data?.settings;
   const isLoyaltyEnabled = settings?.enabled || false;

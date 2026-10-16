@@ -166,7 +166,9 @@ function CheckoutPage() {
         if (user) {
           try {
             await claimOrderFn({ data: { qrToken, orderId } });
-          } catch {}
+          } catch {
+            // Best effort to associate order with signed-in user
+          }
         }
         await payOrder(qrToken, orderId, guestEmail || undefined);
         return;

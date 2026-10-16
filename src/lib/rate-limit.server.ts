@@ -63,8 +63,8 @@ export async function rateLimit(
     if (allowed === false) {
       throw new Error("429: Too Many Requests. Please try again later.");
     }
-  } catch (err: any) {
-    if (err.message?.startsWith("429:")) {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.startsWith("429:")) {
       throw err;
     }
     // Fallback gracefully on RPC connectivity issues

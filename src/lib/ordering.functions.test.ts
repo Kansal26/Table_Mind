@@ -268,10 +268,7 @@ describe("verifyRazorpayPaymentFn – replay and amount checks", () => {
 
     // Generate a valid signature
     const body = rpOrderId + "|" + rpPaymentId;
-    const sig = crypto
-      .createHmac("sha256", "test_secret_key_for_tests")
-      .update(body)
-      .digest("hex");
+    const sig = crypto.createHmac("sha256", "test_secret_key_for_tests").update(body).digest("hex");
 
     // Razorpay API returns a WRONG amount
     mockRazorpay.payments.fetch.mockResolvedValue({
@@ -329,10 +326,7 @@ describe("verifyRazorpayPaymentFn – replay and amount checks", () => {
 
     // Build valid signature
     const body = rpOrderId + "|" + rpPaymentId;
-    const sig = crypto
-      .createHmac("sha256", "test_secret_key_for_tests")
-      .update(body)
-      .digest("hex");
+    const sig = crypto.createHmac("sha256", "test_secret_key_for_tests").update(body).digest("hex");
 
     // Stored order
     const storedChain = chainMock({
@@ -417,10 +411,7 @@ describe("verifyRazorpayPaymentFn – replay and amount checks", () => {
     const rpPaymentId = "pay_789";
 
     const body = rpOrderId + "|" + rpPaymentId;
-    const sig = crypto
-      .createHmac("sha256", "test_secret_key_for_tests")
-      .update(body)
-      .digest("hex");
+    const sig = crypto.createHmac("sha256", "test_secret_key_for_tests").update(body).digest("hex");
 
     const storedChain = chainMock({
       razorpay_order_id: rpOrderId,

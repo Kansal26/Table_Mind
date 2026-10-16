@@ -41,7 +41,7 @@ function LoginPage() {
   async function handleGoogleSignIn() {
     setError(null);
     const safeRedirect =
-      search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+      search.redirect && /^\/[a-zA-Z0-9/_-]*$/.test(search.redirect) ? search.redirect : null;
     const redirectQuery = safeRedirect ? `?redirect=${encodeURIComponent(safeRedirect)}` : "";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -87,7 +87,7 @@ function LoginPage() {
         setError(signInError.message);
       } else {
         const safeRedirect =
-          search.redirect && /^\/[a-zA-Z0-9\-_\/]*$/.test(search.redirect) ? search.redirect : null;
+          search.redirect && /^\/[a-zA-Z0-9/_-]*$/.test(search.redirect) ? search.redirect : null;
         if (safeRedirect) {
           navigate({ to: safeRedirect as any, search });
         } else {
