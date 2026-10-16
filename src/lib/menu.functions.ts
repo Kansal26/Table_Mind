@@ -47,19 +47,30 @@ export const upsertMenuItemFn = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await requireRestaurantOwnership(data.token, data.restaurant_id);
-    rateLimit(user.id, "upsertMenuItem", 100, 15 * 60 * 1000);
+    if (data.id) {
+      const { data: existing, error: existErr } = await supabaseAdmin
+        .from("menu_items")
+        .select("restaurant_id")
+        .eq("id", data.id)
+        .single();
+      if (existErr || !existing) throw new Error("Menu item not found");
 
-    const { token, ...itemData } = data;
+      const user = await requireRestaurantOwnership(data.token, existing.restaurant_id);
+      rateLimit(user.id, "upsertMenuItem", 100, 15 * 60 * 1000);
 
-    if (itemData.id) {
+      // Ignore any restaurant_id change in the update
+      const { token, id, restaurant_id, ...updateData } = data;
       const { error } = await supabaseAdmin
         .from("menu_items")
-        .update(itemData as any)
-        .eq("id", itemData.id);
+        .update(updateData as any)
+        .eq("id", data.id);
       if (error) throw error;
     } else {
-      const { error } = await supabaseAdmin.from("menu_items").insert(itemData as any);
+      const user = await requireRestaurantOwnership(data.token, data.restaurant_id);
+      rateLimit(user.id, "upsertMenuItem", 100, 15 * 60 * 1000);
+
+      const { token, ...insertData } = data;
+      const { error } = await supabaseAdmin.from("menu_items").insert(insertData as any);
       if (error) throw error;
     }
     return { ok: true };

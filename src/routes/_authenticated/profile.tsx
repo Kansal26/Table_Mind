@@ -77,7 +77,7 @@ function ProfilePage() {
     queryKey: ["wallet", userId],
     queryFn: async () => {
       const { getWalletBalanceFn } = await import("@/lib/wallet.functions");
-      return getWalletBalanceFn({ data: { userId } });
+      return getWalletBalanceFn();
     },
     enabled: !!userId,
   });

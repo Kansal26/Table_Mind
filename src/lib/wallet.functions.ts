@@ -1,44 +1,45 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSessionScope } from "./ordering.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const structuredAnswersSchema = z
+  .record(z.string().max(100), z.string().max(500))
+  .refine((obj) => Object.keys(obj).length <= 10, {
+    message: "Structured answers cannot exceed 10 keys",
+  });
 
 const submitFeedbackSchema = z.object({
-  qrToken: z.string().min(1),
+  qrToken: z.string().min(1).max(200),
   orderId: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
-  comment: z.string().optional(),
-  structuredAnswers: z.any().optional(),
+  comment: z.string().max(1000).optional(),
+  structuredAnswers: structuredAnswersSchema.optional(),
 });
 
 export const submitFeedbackFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .validator((data: unknown) => submitFeedbackSchema.parse(data))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const { resolveTableId, requireOwnedOrder } = await import("./ordering.server");
     const { processFeedbackSubmission } = await import("./wallet.server");
 
-    const scope = await requireSessionScope(data.qrToken);
-    if (!scope) throw new Error("Invalid table QR code");
+    const tableId = await resolveTableId(data.qrToken);
+    if (!tableId) throw new Error("Invalid table QR code");
 
-    // Must be signed in to submit feedback
-    const {
-      data: { user },
-    } = await supabaseAdmin.auth.getUser();
-    // Wait, Supabase auth in server functions relies on the auth token in headers, which is checked via standard client not admin client.
-    // However, TanStack start functions might use a different way. Let's just check the order's user_id.
-    const { data: order } = await (supabaseAdmin as any)
-      .from("orders")
-      .select("user_id, status")
-      .eq("id", data.orderId)
-      .single();
-
+    const order = await requireOwnedOrder(tableId, data.orderId);
     if (!order) throw new Error("Order not found");
-    if (!order.user_id) throw new Error("Guests cannot submit feedback");
-    if (order.status !== "paid") throw new Error("Can only feedback on paid orders");
+
+    if (order.user_id !== context.userId) {
+      throw new Error("Unauthorized: Order does not belong to you");
+    }
+    if (order.status !== "paid") {
+      throw new Error("Can only feedback on paid orders");
+    }
 
     try {
       const res = await processFeedbackSubmission(
         data.orderId,
-        order.user_id,
+        context.userId,
         data.rating,
         data.comment,
         data.structuredAnswers,
@@ -53,14 +54,15 @@ export const submitFeedbackFn = createServerFn({ method: "POST" })
   });
 
 const redeemPointsSchema = z.object({
-  qrToken: z.string().min(1),
+  qrToken: z.string().min(1).max(200),
   orderId: z.string().uuid(),
   pointsRedeemed: z.number().int().min(0),
 });
 
 export const redeemPointsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .validator((data: unknown) => redeemPointsSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { recalcTotals, requireOwnedOrder, resolveTableId } = await import("./ordering.server");
 
@@ -71,8 +73,9 @@ export const redeemPointsFn = createServerFn({ method: "POST" })
     if (!order) throw new Error("Order not found");
     if (order.status !== "cart") throw new Error("Order is not open");
 
-    // Only signed in users can redeem points
-    if (!order.user_id) throw new Error("Guests cannot redeem points");
+    if (order.user_id !== context.userId) {
+      throw new Error("Unauthorized: Order does not belong to you");
+    }
 
     const { error } = await (supabaseAdmin as any)
       .from("orders")
@@ -97,8 +100,8 @@ export const checkFeedbackExistsFn = createServerFn({ method: "POST" })
   });
 
 export const getWalletBalanceFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getWalletBalance } = await import("./wallet.server");
 
@@ -114,7 +117,7 @@ export const getWalletBalanceFn = createServerFn({ method: "POST" })
 
     const balances = [];
     for (const { restaurant_id } of enabledRestaurants) {
-      const balance = await getWalletBalance(data.userId, restaurant_id);
+      const balance = await getWalletBalance(context.userId, restaurant_id);
       if (balance > 0) {
         // Fetch restaurant name
         const { data: rest } = await (supabaseAdmin as any)
@@ -136,10 +139,11 @@ export const getWalletBalanceFn = createServerFn({ method: "POST" })
   });
 
 export const getLoyaltyDataFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .validator((data: unknown) =>
-    z.object({ qrToken: z.string().min(1), userId: z.string().uuid() }).parse(data),
+    z.object({ qrToken: z.string().min(1).max(200) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getWalletBalance } = await import("./wallet.server");
     const { resolveTableId } = await import("./ordering.server");
@@ -163,7 +167,7 @@ export const getLoyaltyDataFn = createServerFn({ method: "POST" })
 
     if (!settings || !settings.enabled) return { settings: null, balance: 0 };
 
-    const balance = await getWalletBalance(data.userId, table.restaurant_id);
+    const balance = await getWalletBalance(context.userId, table.restaurant_id);
 
     return { settings, balance };
   });

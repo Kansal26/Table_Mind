@@ -51,7 +51,7 @@ function FeedbackPage() {
     queryKey: ["loyalty", qrToken, user?.id],
     queryFn: async () => {
       const { getLoyaltyDataFn } = await import("@/lib/wallet.functions");
-      return getLoyaltyDataFn({ data: { qrToken, userId: user!.id } });
+      return getLoyaltyDataFn({ data: { qrToken } });
     },
     enabled: !!user && !!qrToken,
   });

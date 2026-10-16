@@ -152,8 +152,7 @@ export const getKitchenLoadFn = createServerFn({ method: "POST" })
     z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await verifyAdminAuth(data.token);
-    // RLS check manual for load fn
+    await requireRestaurantOwnership(data.token, data.restaurantId);
     return getKitchenLoad(data.restaurantId);
   });
 
@@ -202,7 +201,17 @@ export const updateKitchenStatusFn = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await verifyAdminAuth(data.token);
+    const { data: order, error: orderErr } = await supabaseAdmin
+      .from("orders")
+      .select("id, sessions!inner(tables!inner(restaurant_id))")
+      .eq("id", data.orderId)
+      .single();
+    if (orderErr || !order) throw new Error("Order not found");
+
+    const restaurantId = (order as any).sessions?.tables?.restaurant_id;
+    if (!restaurantId) throw new Error("Restaurant not found for this order");
+
+    const user = await requireRestaurantOwnership(data.token, restaurantId);
     rateLimit(user.id, "updateKitchenStatus", 200, 15 * 60 * 1000);
 
     const { error } = await supabaseAdmin

@@ -111,18 +111,41 @@ export const toggleCouponFn = createServerFn({ method: "POST" })
     await supabaseAdmin.from("coupons").update({ active: data.active }).eq("id", data.couponId);
   });
 
+const discountPctSchema = z.number().int().min(1).max(100);
+
+export const couponRuleSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("first_order"),
+    discount_pct: discountPctSchema,
+  }),
+  z.object({
+    type: z.literal("min_spend"),
+    amount: z.number().min(0),
+    discount_pct: discountPctSchema,
+  }),
+  z.object({
+    type: z.literal("item_specific"),
+    item_id: z.string().uuid(),
+    discount_pct: discountPctSchema,
+  }),
+  z.object({
+    type: z.literal("time_window"),
+    start: z.string().min(1).max(20),
+    end: z.string().min(1).max(20),
+    discount_pct: discountPctSchema,
+  }),
+]);
+
+const createCouponSchema = z.object({
+  token: z.string(),
+  restaurantId: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional().nullable(),
+  rule_json: couponRuleSchema,
+});
+
 export const createCouponFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
-    z
-      .object({
-        token: z.string(),
-        restaurantId: z.string().uuid(),
-        name: z.string().min(1),
-        description: z.string(),
-        rule_json: z.any(),
-      })
-      .parse(data),
-  )
+  .validator((data: unknown) => createCouponSchema.parse(data))
   .handler(async ({ data }) => {
     const user = await requireRestaurantOwnership(data.token, data.restaurantId);
     rateLimit(user.id, "createCoupon", 100, 15 * 60 * 1000);
@@ -130,8 +153,8 @@ export const createCouponFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("coupons").insert({
       restaurant_id: data.restaurantId,
       name: data.name,
-      description: data.description,
-      rule_json: data.rule_json,
+      description: data.description ?? null,
+      rule_json: data.rule_json as any,
       active: true,
     });
 

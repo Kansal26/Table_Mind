@@ -13,13 +13,13 @@ const addToCartSchema = z.object({
   qty: z.number().int().min(1).max(50),
   notes: z.string().max(500).optional(),
   allergyOverrideAck: z.boolean().optional(),
-  deviceToken: z.string().optional(),
+  deviceToken: z.string().max(100).optional(),
 });
 
 const joinSessionSchema = z.object({
   qrToken: z.string().min(1).max(200),
-  deviceToken: z.string(),
-  participantName: z.string().optional(),
+  deviceToken: z.string().min(1).max(100),
+  participantName: z.string().max(50).optional(),
 });
 
 const lineQtySchema = z.object({
@@ -35,11 +35,11 @@ const orderSchema = z.object({
 });
 
 const verifyRazorpaySchema = z.object({
-  qrToken: z.string(),
+  qrToken: z.string().min(1).max(200),
   orderId: z.string().uuid(),
-  razorpay_order_id: z.string(),
-  razorpay_payment_id: z.string(),
-  razorpay_signature: z.string(),
+  razorpay_order_id: z.string().min(1).max(100),
+  razorpay_payment_id: z.string().min(1).max(100),
+  razorpay_signature: z.string().min(1).max(200),
   guestEmail: z.string().email().optional(),
 });
 

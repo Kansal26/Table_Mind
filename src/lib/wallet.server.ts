@@ -73,15 +73,16 @@ export async function processFeedbackSubmission(
   comment?: string,
   structuredAnswers?: any,
 ) {
-  // Get the order to find the restaurant_id
+  // Get the order to find the restaurant_id via sessions -> tables
   const { data: order, error: orderError } = await (supabaseAdmin as any)
     .from("orders")
-    .select("restaurant_id")
+    .select("id, sessions!inner(tables!inner(restaurant_id))")
     .eq("id", orderId)
     .single();
 
   if (orderError || !order) throw orderError || new Error("Order not found");
-  const restaurantId = order.restaurant_id;
+  const restaurantId = (order as any).sessions?.tables?.restaurant_id;
+  if (!restaurantId) throw new Error("Restaurant not found for order");
 
   // Check loyalty settings
   const { data: settings } = await (supabaseAdmin as any)
@@ -104,6 +105,9 @@ export async function processFeedbackSubmission(
       const answersCount = Object.keys(structuredAnswers).length;
       creditEarned += answersCount * (settings.points_for_question || 0);
     }
+    // Cap total points awarded per order
+    const MAX_POINTS_PER_ORDER = 500;
+    creditEarned = Math.min(creditEarned, MAX_POINTS_PER_ORDER);
   }
 
   // 1. Insert feedback row

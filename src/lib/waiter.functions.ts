@@ -2,27 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveTableId } from "./ordering.server";
-import { verifyAdminAuth } from "./auth.server";
-
-// We check if the user is owner using auth.server logic, similar to other admin fns
-async function requireRestaurantOwnership(token: string, restaurantId: string) {
-  const user = await verifyAdminAuth(token);
-  const { data: owns } = await supabaseAdmin
-    .from("restaurants")
-    .select("id, owner_id")
-    .eq("id", restaurantId)
-    .eq("owner_id", user.id)
-    .single();
-  if (!owns) throw new Error("Unauthorized");
-  return user;
-}
+import { requireRestaurantOwnership } from "./auth.server";
 
 export const callWaiterFn = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        qrToken: z.string(),
-        reason: z.string(),
+        qrToken: z.string().min(1).max(200),
+        reason: z.string().min(1).max(200),
       })
       .parse(data),
   )

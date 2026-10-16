@@ -25,6 +25,14 @@ export const claimOrderFn = createServerFn({ method: "POST" })
     const order = await requireOwnedOrder(tableId, data.orderId);
     if (!order) throw new Error("We couldn't find that order.");
 
+    if (order.user_id !== null && order.user_id !== context.userId) {
+      throw new Error("This order has already been claimed by another user.");
+    }
+
+    if (order.status !== "cart" && order.status !== "paid") {
+      throw new Error("Only orders in cart or paid status can be claimed.");
+    }
+
     const { error } = await supabaseAdmin
       .from("orders")
       .update({ user_id: context.userId })
