@@ -18,21 +18,54 @@ Traditional dine-in ordering suffers from severe operational bottlenecks: diners
 
 ## Product Walkthrough
 
-<!-- Capture: Hero view showing the diner table interface on mobile and the admin live orders dashboard on desktop -->
-![TableMind Platform Overview](docs/images/hero-overview.png)
-*Figure 1: Diner mobile ordering interface (left) synchronized with the restaurant live operations dashboard (right).*
+<!-- 
+WALKTHROUGH SCREENSHOT CAPTURE GUIDE:
+Capture the following screens from the running application and save them to docs/images/:
 
-<!-- Capture: Close-up of diner table menu showing dietary filters, allergen badges, and AI recommendations -->
-![Diner Menu and Recommendations](docs/images/diner-menu.png)
-*Figure 2: Interactive menu with dietary filter pills, allergen alerts, and dynamic recommendations.*
+1. docs/images/hero-overview.png
+   Capture: Hero view showing the diner table interface on mobile side-by-side with the admin live orders dashboard on desktop.
+   Figure 1: Diner mobile ordering interface (left) synchronized with the restaurant live operations dashboard (right).
 
-<!-- Capture: Voice order modal showing transcribed speech, parsed dish quantities, and the add-to-cart confirmation -->
-![Voice Ordering Experience](docs/images/voice-order.png)
-*Figure 3: Voice ordering flow with in-browser speech transcription and structured item extraction.*
+2. docs/images/diner-menu.png
+   Capture: Close-up of diner table menu showing dietary filter pills, allergen badges, and AI recommendations.
+   Figure 2: Interactive menu with dietary filter pills, allergen alerts, and dynamic recommendations.
 
-<!-- Capture: Admin table management screen showing table statuses, QR generation, and printable PDF booklet download -->
-![Admin Table Management and QR Generation](docs/images/admin-tables.png)
-*Figure 4: Table session management, token regeneration, and printable PDF export.*
+3. docs/images/voice-order.png
+   Capture: Voice order modal showing transcribed speech, parsed dish quantities, and the add-to-cart confirmation.
+   Figure 3: Voice ordering flow with in-browser speech transcription and structured item extraction.
+
+4. docs/images/admin-tables.png
+   Capture: Admin table management screen showing table statuses, QR generation, and printable PDF booklet download.
+   Figure 4: Table session management, token regeneration, and printable PDF export.
+
+Uncomment the image tags below once screenshots are captured and placed in docs/images/:
+<p align="center">
+  <img src="docs/images/hero-overview.png" alt="TableMind Platform Overview" width="100%" />
+  <br><em>Figure 1: Diner mobile ordering interface (left) synchronized with the restaurant live operations dashboard (right).</em>
+</p>
+<p align="center">
+  <img src="docs/images/diner-menu.png" alt="Diner Menu and Recommendations" width="100%" />
+  <br><em>Figure 2: Interactive menu with dietary filter pills, allergen alerts, and dynamic recommendations.</em>
+</p>
+<p align="center">
+  <img src="docs/images/voice-order.png" alt="Voice Ordering Experience" width="100%" />
+  <br><em>Figure 3: Voice ordering flow with in-browser speech transcription and structured item extraction.</em>
+</p>
+<p align="center">
+  <img src="docs/images/admin-tables.png" alt="Admin Table Management and QR Generation" width="100%" />
+  <br><em>Figure 4: Table session management, token regeneration, and printable PDF export.</em>
+</p>
+-->
+
+> [!NOTE]
+> **Interface Walkthrough**
+> 
+> TableMind links the front-of-house diner mobile experience with back-of-house operations:
+> - **Diner Table Portal (`/table/:qrToken`):** Zero-install, session-bound table interface with shared real-time cart, dietary filtering, and voice ordering.
+> - **Kitchen & Manager Dashboard (`/admin/dashboard`):** Live ticket progression, kitchen prep load indicator, and instant waiter assistance alerts.
+> - **Table Operations & QR Management (`/admin/tables`):** Real-time table session toggling, cryptographic QR token regeneration, and printable PDF booklet export.
+>
+> *(To display visual captures, place screenshots in `docs/images/` and uncomment the walkthrough image tags.)*
 
 ---
 
