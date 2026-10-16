@@ -109,9 +109,13 @@ RULES:
     const sanitizedItems = rawItems.map((item: Record<string, unknown>) => ({
       ...item,
       quantity:
-        typeof item["quantity"] === "string" ? parseInt(item["quantity"], 10) || 1 : item["quantity"],
+        typeof item["quantity"] === "string"
+          ? parseInt(item["quantity"], 10) || 1
+          : item["quantity"],
       confidence:
-        typeof item["confidence"] === "string" ? parseFloat(item["confidence"]) || 1 : item["confidence"],
+        typeof item["confidence"] === "string"
+          ? parseFloat(item["confidence"]) || 1
+          : item["confidence"],
       customizations: item["customizations"] ?? null,
     }));
 
