@@ -292,7 +292,7 @@ export const fetchAnalyticsFn = createServerFn({ method: "POST" })
     // 3. Coupons
     const { data: discounts } = await supabaseAdmin
       .from("order_discounts")
-      .select("discount_amount, coupons!inner(code, name, restaurant_id)")
+      .select("discount_amount, coupons!inner(id, name, restaurant_id)")
       .eq("coupons.restaurant_id", data.restaurantId);
 
     const couponStats: Record<
@@ -304,16 +304,17 @@ export const fetchAnalyticsFn = createServerFn({ method: "POST" })
       for (const d of discounts) {
         const c = d.coupons as any;
         if (c) {
-          if (!couponStats[c.code]) {
-            couponStats[c.code] = {
-              name: c.name || c.code,
-              code: c.code,
+          const key = c.name || c.id;
+          if (!couponStats[key]) {
+            couponStats[key] = {
+              name: c.name || "Coupon",
+              code: c.name || "COUPON",
               redeemed: 0,
               total_discount: 0,
             };
           }
-          couponStats[c.code]!.redeemed++;
-          couponStats[c.code]!.total_discount += Number(d.discount_amount) || 0;
+          couponStats[key]!.redeemed++;
+          couponStats[key]!.total_discount += Number(d.discount_amount) || 0;
         }
       }
     }
@@ -490,7 +491,7 @@ export const exportCouponsFn = createServerFn({ method: "POST" })
 
     const { data: discounts } = await supabaseAdmin
       .from("order_discounts")
-      .select("discount_amount, coupons!inner(code, name, type, restaurant_id)")
+      .select("discount_amount, coupons!inner(id, name, rule_json, restaurant_id)")
       .eq("coupons.restaurant_id", data.restaurantId);
 
     const couponStats: Record<string, any> = {};
@@ -499,11 +500,13 @@ export const exportCouponsFn = createServerFn({ method: "POST" })
       for (const d of discounts) {
         const c = d.coupons as any;
         if (c) {
-          if (!couponStats[c.code]) {
-            couponStats[c.code] = { name: c.name, type: c.type, redeemed: 0, totalDiscount: 0 };
+          const key = c.name || c.id;
+          const couponType = c.rule_json?.type || "general";
+          if (!couponStats[key]) {
+            couponStats[key] = { name: c.name || "Coupon", type: couponType, redeemed: 0, totalDiscount: 0 };
           }
-          couponStats[c.code].redeemed += 1;
-          couponStats[c.code].totalDiscount += Number(d.discount_amount || 0);
+          couponStats[key].redeemed += 1;
+          couponStats[key].totalDiscount += Number(d.discount_amount || 0);
         }
       }
     }

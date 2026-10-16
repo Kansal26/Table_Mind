@@ -1,0 +1,209 @@
+section,object_name,property_name,detail_1,detail_2,detail_3
+COLUMN,coupons,active,boolean,YES,true
+COLUMN,coupons,created_at,timestamp without time zone,YES,now()
+COLUMN,coupons,description,text,YES,
+COLUMN,coupons,id,uuid,NO,gen_random_uuid()
+COLUMN,coupons,name,text,NO,
+COLUMN,coupons,restaurant_id,uuid,YES,
+COLUMN,coupons,rule_json,jsonb,NO,
+COLUMN,coupons,valid_from,timestamp without time zone,YES,
+COLUMN,coupons,valid_to,timestamp without time zone,YES,
+COLUMN,feedback,comment,text,YES,
+COLUMN,feedback,created_at,timestamp without time zone,YES,now()
+COLUMN,feedback,credit_awarded,numeric,YES,0
+COLUMN,feedback,id,uuid,NO,gen_random_uuid()
+COLUMN,feedback,order_id,uuid,NO,
+COLUMN,feedback,rating,integer,NO,
+COLUMN,feedback,structured_answers,jsonb,YES,
+COLUMN,loyalty_settings,enabled,boolean,YES,false
+COLUMN,loyalty_settings,id,uuid,NO,gen_random_uuid()
+COLUMN,loyalty_settings,max_points_redeemable_per_order,integer,YES,0
+COLUMN,loyalty_settings,min_order_value_to_redeem,numeric,YES,0
+COLUMN,loyalty_settings,points_expiry_days,integer,YES,
+COLUMN,loyalty_settings,points_for_comment,integer,YES,0
+COLUMN,loyalty_settings,points_for_question,integer,YES,0
+COLUMN,loyalty_settings,points_for_rating,integer,YES,0
+COLUMN,loyalty_settings,points_per_rupee,numeric,YES,0
+COLUMN,loyalty_settings,restaurant_id,uuid,NO,
+COLUMN,loyalty_settings,updated_at,timestamp with time zone,YES,now()
+COLUMN,menu_items,allergens,ARRAY,YES,'{}'::text[]
+COLUMN,menu_items,available,boolean,NO,true
+COLUMN,menu_items,badge,text,YES,
+COLUMN,menu_items,category,text,NO,
+COLUMN,menu_items,created_at,timestamp with time zone,NO,now()
+COLUMN,menu_items,description,text,YES,
+COLUMN,menu_items,dietary_tags,ARRAY,YES,'{}'::text[]
+COLUMN,menu_items,id,uuid,NO,gen_random_uuid()
+COLUMN,menu_items,image_url,text,YES,
+COLUMN,menu_items,is_deleted,boolean,YES,false
+COLUMN,menu_items,is_featured,boolean,YES,false
+COLUMN,menu_items,name,text,NO,
+COLUMN,menu_items,prep_time_min,integer,YES,10
+COLUMN,menu_items,price,numeric,NO,
+COLUMN,menu_items,restaurant_id,uuid,NO,
+COLUMN,menu_items,sort_order,integer,YES,0
+COLUMN,order_discounts,coupon_id,uuid,YES,
+COLUMN,order_discounts,created_at,timestamp without time zone,YES,now()
+COLUMN,order_discounts,discount_amount,numeric,NO,
+COLUMN,order_discounts,id,uuid,NO,gen_random_uuid()
+COLUMN,order_discounts,order_id,uuid,YES,
+COLUMN,order_items,added_by_device_token,text,YES,
+COLUMN,order_items,added_by_name,text,YES,
+COLUMN,order_items,added_by_user_id,uuid,YES,
+COLUMN,order_items,allergy_override_ack,boolean,YES,false
+COLUMN,order_items,created_at,timestamp with time zone,NO,now()
+COLUMN,order_items,customizations,jsonb,YES,'{}'::jsonb
+COLUMN,order_items,id,uuid,NO,gen_random_uuid()
+COLUMN,order_items,menu_item_id,uuid,NO,
+COLUMN,order_items,order_id,uuid,NO,
+COLUMN,order_items,qty,integer,NO,1
+COLUMN,orders,amount_paise,integer,YES,
+COLUMN,orders,created_at,timestamp with time zone,NO,now()
+COLUMN,orders,credits_applied,numeric,YES,0
+COLUMN,orders,discount_amount,numeric,YES,0
+COLUMN,orders,guest_email,text,YES,
+COLUMN,orders,id,uuid,NO,gen_random_uuid()
+COLUMN,orders,kitchen_status,text,YES,'received'::text
+COLUMN,orders,points_redeemed,integer,YES,0
+COLUMN,orders,razorpay_order_id,text,YES,
+COLUMN,orders,razorpay_payment_id,text,YES,
+COLUMN,orders,session_id,uuid,NO,
+COLUMN,orders,status,text,NO,'pending'::text
+COLUMN,orders,subtotal,numeric,NO,0
+COLUMN,orders,tax,numeric,NO,0
+COLUMN,orders,total,numeric,NO,0
+COLUMN,orders,use_credits,boolean,YES,false
+COLUMN,orders,user_id,uuid,YES,
+COLUMN,otp_verifications,attempts,integer,YES,0
+COLUMN,otp_verifications,code_hash,text,NO,
+COLUMN,otp_verifications,consumed_at,timestamp with time zone,YES,
+COLUMN,otp_verifications,created_at,timestamp with time zone,YES,now()
+COLUMN,otp_verifications,expires_at,timestamp with time zone,NO,
+COLUMN,otp_verifications,id,uuid,NO,gen_random_uuid()
+COLUMN,otp_verifications,max_attempts,integer,YES,5
+COLUMN,otp_verifications,purpose,text,NO,
+COLUMN,otp_verifications,salt,text,NO,
+COLUMN,otp_verifications,used_at,timestamp with time zone,YES,
+COLUMN,otp_verifications,user_id,uuid,NO,
+COLUMN,otp_verifications,verified_at,timestamp with time zone,YES,
+COLUMN,profiles,allergens,ARRAY,YES,'{}'::text[]
+COLUMN,profiles,created_at,timestamp with time zone,NO,now()
+COLUMN,profiles,dietary_tags,ARRAY,YES,'{}'::text[]
+COLUMN,profiles,id,uuid,NO,
+COLUMN,profiles,name,text,YES,
+COLUMN,profiles,phone,text,YES,
+COLUMN,profiles,updated_at,timestamp with time zone,NO,now()
+COLUMN,recommendation_logs,added_to_cart,boolean,NO,false
+COLUMN,recommendation_logs,id,uuid,NO,gen_random_uuid()
+COLUMN,recommendation_logs,item_id,uuid,NO,
+COLUMN,recommendation_logs,reason,text,NO,
+COLUMN,recommendation_logs,session_id,uuid,NO,
+COLUMN,recommendation_logs,shown_at,timestamp with time zone,NO,now()
+COLUMN,recommendation_logs,source,text,YES,'rule'::text
+COLUMN,recommendation_logs,user_id,uuid,NO,
+COLUMN,restaurants,address,text,YES,
+COLUMN,restaurants,banner_url,text,YES,
+COLUMN,restaurants,city,text,YES,
+COLUMN,restaurants,created_at,timestamp with time zone,NO,now()
+COLUMN,restaurants,cuisine_type,text,YES,
+COLUMN,restaurants,deactivated_at,timestamp with time zone,YES,
+COLUMN,restaurants,id,uuid,NO,gen_random_uuid()
+COLUMN,restaurants,is_active,boolean,YES,true
+COLUMN,restaurants,latitude,numeric,YES,
+COLUMN,restaurants,logo_url,text,YES,
+COLUMN,restaurants,longitude,numeric,YES,
+COLUMN,restaurants,name,text,NO,
+COLUMN,restaurants,owner_id,uuid,YES,
+COLUMN,restaurants,tagline,text,YES,
+COLUMN,session_participants,device_token,text,NO,
+COLUMN,session_participants,guest_name,text,YES,
+COLUMN,session_participants,id,uuid,NO,gen_random_uuid()
+COLUMN,session_participants,joined_at,timestamp with time zone,YES,now()
+COLUMN,session_participants,session_id,uuid,NO,
+COLUMN,session_participants,user_id,uuid,YES,
+COLUMN,sessions,access_token,text,NO,''::text
+COLUMN,sessions,created_at,timestamp with time zone,NO,now()
+COLUMN,sessions,id,uuid,NO,gen_random_uuid()
+COLUMN,sessions,last_activity_at,timestamp with time zone,YES,now()
+COLUMN,sessions,participant_count,integer,YES,1
+COLUMN,sessions,status,text,NO,
+COLUMN,sessions,table_id,uuid,NO,
+COLUMN,tables,created_at,timestamp with time zone,NO,now()
+COLUMN,tables,id,uuid,NO,gen_random_uuid()
+COLUMN,tables,is_active,boolean,YES,true
+COLUMN,tables,label,text,YES,
+COLUMN,tables,qr_token,text,NO,
+COLUMN,tables,restaurant_id,uuid,NO,
+COLUMN,tables,seat_count,integer,YES,4
+COLUMN,waiter_calls,acknowledged_at,timestamp with time zone,YES,
+COLUMN,waiter_calls,created_at,timestamp with time zone,YES,now()
+COLUMN,waiter_calls,id,uuid,NO,gen_random_uuid()
+COLUMN,waiter_calls,reason,text,YES,
+COLUMN,waiter_calls,resolved_at,timestamp with time zone,YES,
+COLUMN,waiter_calls,restaurant_id,uuid,NO,
+COLUMN,waiter_calls,session_id,uuid,NO,
+COLUMN,waiter_calls,status,text,YES,'pending'::text
+COLUMN,waiter_calls,table_id,uuid,NO,
+COLUMN,wallet_transactions,amount,numeric,NO,
+COLUMN,wallet_transactions,created_at,timestamp without time zone,YES,now()
+COLUMN,wallet_transactions,expires_at,timestamp with time zone,YES,
+COLUMN,wallet_transactions,id,uuid,NO,gen_random_uuid()
+COLUMN,wallet_transactions,order_id,uuid,YES,
+COLUMN,wallet_transactions,points,integer,YES,
+COLUMN,wallet_transactions,reason,text,YES,
+COLUMN,wallet_transactions,restaurant_id,uuid,YES,
+COLUMN,wallet_transactions,user_id,uuid,NO,
+COLUMN,wallets,balance,numeric,YES,0
+COLUMN,wallets,created_at,timestamp without time zone,YES,now()
+COLUMN,wallets,id,uuid,NO,gen_random_uuid()
+COLUMN,wallets,user_id,uuid,NO,
+POLICY,coupons,Owner can modify coupons,ALL (PERMISSIVE),public,"(restaurant_id IN ( SELECT restaurants.id
+   FROM restaurants
+ "
+POLICY,menu_items,Owner can modify menu_items,ALL (PERMISSIVE),public,"(restaurant_id IN ( SELECT restaurants.id
+   FROM restaurants
+ "
+POLICY,menu_items,Public can view menu_items,SELECT (PERMISSIVE),public,true
+POLICY,order_items,Public can insert order_items,INSERT (PERMISSIVE),public," [CHECK: true]"
+POLICY,order_items,Public can update order_items,UPDATE (PERMISSIVE),public,true
+POLICY,order_items,Public can view order_items,SELECT (PERMISSIVE),public,true
+POLICY,orders,Public can insert orders,INSERT (PERMISSIVE),public," [CHECK: true]"
+POLICY,orders,Public can update orders,UPDATE (PERMISSIVE),public,true
+POLICY,orders,Public can view orders,SELECT (PERMISSIVE),public,true
+POLICY,otp_verifications,Service role manages OTPs,ALL (PERMISSIVE),service_role,true [CHECK: true]
+POLICY,profiles,Users can insert own profile,INSERT (PERMISSIVE),public," [CHECK: (auth.uid() = id)]"
+POLICY,profiles,Users can update own profile,UPDATE (PERMISSIVE),public,(auth.uid() = id)
+POLICY,profiles,Users can view own profile,SELECT (PERMISSIVE),public,(auth.uid() = id)
+POLICY,recommendation_logs,Users can manage own recommendation logs,ALL (PERMISSIVE),public,(auth.uid() = user_id) [CHECK: (auth.uid() = user_id)]
+POLICY,restaurants,Authenticated users can insert restaurant,INSERT (PERMISSIVE),public," [CHECK: (auth.uid() = owner_id)]"
+POLICY,restaurants,Owner can delete own restaurant,DELETE (PERMISSIVE),public,(auth.uid() = owner_id)
+POLICY,restaurants,Owner can update own restaurant,UPDATE (PERMISSIVE),public,(auth.uid() = owner_id)
+POLICY,restaurants,Public can view restaurants,SELECT (PERMISSIVE),public,true
+POLICY,session_participants,Public can insert session_participants,INSERT (PERMISSIVE),public," [CHECK: true]"
+POLICY,session_participants,Public can update session_participants,UPDATE (PERMISSIVE),public,true
+POLICY,sessions,Public can insert sessions,INSERT (PERMISSIVE),public," [CHECK: true]"
+POLICY,sessions,Public can update sessions,UPDATE (PERMISSIVE),public,true
+POLICY,sessions,Public can view sessions,SELECT (PERMISSIVE),public,true
+POLICY,tables,Owner can modify tables,ALL (PERMISSIVE),public,"(restaurant_id IN ( SELECT restaurants.id
+   FROM restaurants
+ "
+POLICY,tables,Public can view tables,SELECT (PERMISSIVE),public,true
+POLICY,waiter_calls,Owner can modify waiter calls,ALL (PERMISSIVE),public,"(restaurant_id IN ( SELECT restaurants.id
+   FROM restaurants
+ "
+POLICY,waiter_calls,Public can insert waiter calls,INSERT (PERMISSIVE),public," [CHECK: true]"
+POLICY,waiter_calls,Public can view own session calls,SELECT (PERMISSIVE),public,true
+ROUTINE_PRIVILEGE,complete_payment,postgres,EXECUTE,YES,complete_payment_25632
+ROUTINE_PRIVILEGE,complete_payment,service_role,EXECUTE,NO,complete_payment_25632
+ROUTINE_PRIVILEGE,consume_verified_otp,PUBLIC,EXECUTE,NO,consume_verified_otp_25635
+ROUTINE_PRIVILEGE,consume_verified_otp,anon,EXECUTE,NO,consume_verified_otp_25635
+ROUTINE_PRIVILEGE,consume_verified_otp,authenticated,EXECUTE,NO,consume_verified_otp_25635
+ROUTINE_PRIVILEGE,consume_verified_otp,postgres,EXECUTE,YES,consume_verified_otp_25635
+ROUTINE_PRIVILEGE,consume_verified_otp,service_role,EXECUTE,NO,consume_verified_otp_25635
+ROUTINE_PRIVILEGE,delete_restaurant_account,postgres,EXECUTE,YES,delete_restaurant_account_18287
+ROUTINE_PRIVILEGE,delete_restaurant_account,service_role,EXECUTE,NO,delete_restaurant_account_18287
+ROUTINE_PRIVILEGE,increment_otp_attempts,PUBLIC,EXECUTE,NO,increment_otp_attempts_25634
+ROUTINE_PRIVILEGE,increment_otp_attempts,anon,EXECUTE,NO,increment_otp_attempts_25634
+ROUTINE_PRIVILEGE,increment_otp_attempts,authenticated,EXECUTE,NO,increment_otp_attempts_25634
+ROUTINE_PRIVILEGE,increment_otp_attempts,postgres,EXECUTE,YES,increment_otp_attempts_25634
+ROUTINE_PRIVILEGE,increment_otp_attempts,service_role,EXECUTE,NO,increment_otp_attempts_25634

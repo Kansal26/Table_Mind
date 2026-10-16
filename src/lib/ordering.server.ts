@@ -132,7 +132,12 @@ export async function loadOrderLines(orderId: string) {
     return {
       id: row.id,
       qty: row.qty,
-      customizations: (row.customizations as { notes?: string } | null) ?? null,
+      customizations:
+        row.customizations && typeof row.customizations === "object"
+          ? (row.customizations as { notes?: string })
+          : typeof row.customizations === "string"
+            ? { notes: row.customizations }
+            : null,
       menu_item: { ...item, price: Number(item.price) },
     };
   });

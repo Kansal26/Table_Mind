@@ -114,8 +114,8 @@ export async function processFeedbackSubmission(
   const { error: feedbackError } = await (supabaseAdmin as any).from("feedback").insert({
     order_id: orderId,
     rating,
-    comment,
-    structured_answers: structuredAnswers,
+    comment: comment ?? null,
+    structured_answers: structuredAnswers ?? null,
     credit_awarded: creditEarned, // Repurposing this column to store points awarded
   });
 

@@ -267,7 +267,7 @@ export const addToCartFn = createServerFn({ method: "POST" })
       order_id: orderId,
       menu_item_id: item.id,
       qty: data.qty,
-      customizations: (notes ? { notes } : null) as any,
+      customizations: (notes ? { notes } : {}) as any,
       allergy_override_ack: data.allergyOverrideAck ?? false,
       added_by_user_id: userId,
       added_by_name: participantName,
@@ -280,6 +280,13 @@ export const addToCartFn = createServerFn({ method: "POST" })
       }
       throw error;
     }
+
+    // Set added_to_cart = true on any recommendation logs for this item in this session
+    await supabaseAdmin
+      .from("recommendation_logs")
+      .update({ added_to_cart: true })
+      .eq("session_id", scope.sessionId)
+      .eq("item_id", item.id);
 
     const { recordSessionActivity } = await import("./ordering.server");
     await recordSessionActivity(scope.sessionId);
@@ -655,17 +662,19 @@ IMPORTANT RULES:
       });
     }
 
-    // Log recommendations
-    const recsToLog = recommendations.map((r) => ({
-      user_id: userId,
-      session_id: scope.sessionId,
-      item_id: r.item.id,
-      reason: r.reason,
-      source: r.source,
-    }));
+    // Log recommendations (only if logged in, since user_id is NOT NULL in recommendation_logs)
+    if (userId) {
+      const recsToLog = recommendations.map((r) => ({
+        user_id: userId,
+        session_id: scope.sessionId,
+        item_id: r.item.id,
+        reason: r.reason,
+        source: r.source,
+      }));
 
-    if (recsToLog.length > 0) {
-      await supabaseAdmin.from("recommendation_logs").insert(recsToLog);
+      if (recsToLog.length > 0) {
+        await supabaseAdmin.from("recommendation_logs").insert(recsToLog);
+      }
     }
 
     return recommendations.map((r) => ({
