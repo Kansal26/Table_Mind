@@ -40,6 +40,17 @@ export async function deductWallet(
 ) {
   if (pointsToRedeem <= 0) return;
 
+  // Idempotency guard: if a deduction for this order already exists, skip.
+  const { data: existing, error: existError } = await (supabaseAdmin as any)
+    .from("wallet_transactions")
+    .select("id")
+    .eq("order_id", orderId)
+    .lt("points", 0)
+    .limit(1)
+    .maybeSingle();
+  if (existError) throw existError;
+  if (existing) return; // already deducted for this order
+
   const current = await getWalletBalance(userId, restaurantId);
   if (current < pointsToRedeem) throw new Error("Insufficient points balance");
 

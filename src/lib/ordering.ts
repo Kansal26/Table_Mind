@@ -8,6 +8,7 @@ import {
   setLineQtyFn,
   getRecommendationsFn,
   joinSessionFn,
+  fetchSessionParticipantsFn,
   createRazorpayOrderFn,
   verifyRazorpayPaymentFn,
 } from "@/lib/ordering.functions";
@@ -70,6 +71,10 @@ export async function resolveTable(qrToken: string): Promise<TableContext | null
 
 export async function joinSession(qrToken: string, deviceToken: string, participantName?: string) {
   return await joinSessionFn({ data: { qrToken, deviceToken, participantName } });
+}
+
+export async function fetchSessionParticipants(qrToken: string) {
+  return await fetchSessionParticipantsFn({ data: { qrToken } });
 }
 
 /** Menu + restaurant data is public catalogue content, read straight from the client. */

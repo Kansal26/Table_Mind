@@ -1,16 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin, getSupabaseAuthClient } from "@/integrations/supabase/client.server";
-import { verifyAdminAuth } from "./auth.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { verifyAdminAuth, requireRestaurantOwnership } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
 
 export const getOwnerRestaurantFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ token: z.string() }).parse(data))
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
-    const sb = getSupabaseAuthClient(data.token);
 
-    const { data: restaurant, error } = await sb
+    const { data: restaurant, error } = await supabaseAdmin
       .from("restaurants")
       .select("*")
       .eq("owner_id", user.id)
@@ -163,15 +162,12 @@ export const fetchLiveOrdersFn = createServerFn({ method: "POST" })
     z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await verifyAdminAuth(data.token);
-
-    // Auth client will respect RLS (though orders table might be public select for now, we verify ownership)
-    const sb = getSupabaseAuthClient(data.token);
+    await requireRestaurantOwnership(data.token, data.restaurantId);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data: orders } = await sb
+    const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select(
         `
@@ -191,6 +187,7 @@ export const fetchLiveOrdersFn = createServerFn({ method: "POST" })
       )
       .order("created_at", { ascending: true });
 
+    if (error) throw error;
     return orders || [];
   });
 

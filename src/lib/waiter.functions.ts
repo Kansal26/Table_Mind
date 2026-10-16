@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin, getSupabaseAuthClient } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveTableId } from "./ordering.server";
 import { verifyAdminAuth } from "./auth.server";
 

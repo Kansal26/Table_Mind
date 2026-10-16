@@ -11,6 +11,7 @@ import {
   payOrder,
   createRazorpayOrder,
   verifyRazorpayPayment,
+  fetchSessionParticipants,
   type CartLine,
 } from "@/lib/ordering";
 import { fetchEligibleCoupons, applyCoupon } from "@/lib/coupons";
@@ -110,15 +111,8 @@ function CheckoutPage() {
 
   const participantsQuery = useQuery({
     queryKey: ["participants", qrToken, sessionId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("session_participants" as any)
-        .select("*")
-        .eq("session_id", sessionId);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!sessionId,
+    queryFn: () => fetchSessionParticipants(qrToken),
+    enabled: !!sessionId && !!qrToken,
   });
 
   const couponsQuery = useQuery({

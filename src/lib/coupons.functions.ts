@@ -7,7 +7,7 @@ import {
   loadOrderLines,
 } from "@/lib/ordering.server";
 import { evaluateCoupons } from "@/lib/coupons.server";
-import { supabaseAdmin, getSupabaseAuthClient } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireRestaurantOwnership } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
 
@@ -82,10 +82,9 @@ export const fetchAdminCouponsFn = createServerFn({ method: "POST" })
     z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await requireRestaurantOwnership(data.token, data.restaurantId);
-    const sb = getSupabaseAuthClient(data.token);
+    await requireRestaurantOwnership(data.token, data.restaurantId);
 
-    const { data: coupons, error } = await sb
+    const { data: coupons, error } = await supabaseAdmin
       .from("coupons")
       .select("*")
       .eq("restaurant_id", data.restaurantId)

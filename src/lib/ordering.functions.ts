@@ -85,6 +85,24 @@ export const resolveTableFn = createServerFn({ method: "POST" })
     };
   });
 
+export const fetchSessionParticipantsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => qrTokenSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { requireSessionScope } = await import("./ordering.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const scope = await requireSessionScope(data.qrToken);
+    if (!scope) return [];
+
+    const { data: participants, error } = await supabaseAdmin
+      .from("session_participants")
+      .select("*")
+      .eq("session_id", scope.sessionId);
+
+    if (error) throw error;
+    return participants || [];
+  });
+
 export const joinSessionFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => joinSessionSchema.parse(data))
   .handler(async ({ data }) => {

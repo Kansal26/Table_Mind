@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin, getSupabaseAuthClient } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminAuth } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
 import { sendRestaurantWelcomeEmail } from "./email.server";
@@ -24,10 +24,9 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
     const user = await verifyAdminAuth(data.token);
     // Strict rate limit for registration (e.g. 5 per day max per user)
     rateLimit(user.id, "registerRestaurant", 5, 24 * 60 * 60 * 1000);
-    const sb = getSupabaseAuthClient(data.token);
 
     // 1. Check if user already owns a restaurant
-    const { data: existing } = await sb
+    const { data: existing } = await supabaseAdmin
       .from("restaurants")
       .select("id, owner_id")
       .eq("owner_id", user.id)
@@ -37,8 +36,8 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
       throw new Error("User already owns a restaurant");
     }
 
-    // 2. Create the restaurant (RLS allows owner to insert)
-    const { data: restaurant, error: rError } = await sb
+    // 2. Create the restaurant
+    const { data: restaurant, error: rError } = await supabaseAdmin
       .from("restaurants")
       .insert({
         name: data.name,
@@ -72,20 +71,17 @@ export const registerRestaurantFn = createServerFn({ method: "POST" })
       });
     }
 
-    const { error: tError } = await sb.from("tables").insert(tablesToInsert);
+    const { error: tError } = await supabaseAdmin.from("tables").insert(tablesToInsert);
 
     if (tError) throw tError;
 
     // 4. Send welcome email
     try {
-      const {
-        data: { user: authUser },
-      } = await sb.auth.getUser();
-      if (authUser && authUser.email) {
-        const ownerName = authUser.user_metadata?.["full_name"] || data.name;
+      if (user.email) {
+        const ownerName = user.user_metadata?.["full_name"] || data.name;
 
         await sendRestaurantWelcomeEmail({
-          ownerEmail: authUser.email,
+          ownerEmail: user.email,
           restaurantName: data.name,
           ownerName: ownerName,
         });

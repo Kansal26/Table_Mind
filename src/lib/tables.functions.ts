@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin, getSupabaseAuthClient } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireRestaurantOwnership } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
 
@@ -9,10 +9,9 @@ export const fetchAdminTablesFn = createServerFn({ method: "POST" })
     z.object({ token: z.string(), restaurantId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data }) => {
-    const user = await requireRestaurantOwnership(data.token, data.restaurantId);
-    const sb = getSupabaseAuthClient(data.token);
+    await requireRestaurantOwnership(data.token, data.restaurantId);
 
-    const { data: tables, error } = await sb
+    const { data: tables, error } = await supabaseAdmin
       .from("tables")
       .select("*")
       .eq("restaurant_id", data.restaurantId)

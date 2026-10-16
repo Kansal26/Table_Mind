@@ -21,6 +21,7 @@ import {
   money,
   resolveTable,
   joinSession,
+  fetchSessionParticipants,
   setLineQty,
   getRecommendations,
   type MenuItem,
@@ -405,15 +406,7 @@ function TableMenuPage() {
 
   const participantsQuery = useQuery({
     queryKey: ["participants", qrToken, ctx?.sessionId],
-    queryFn: async () => {
-      if (!ctx?.sessionId) return [];
-      const { data, error } = await supabase
-        .from("session_participants" as any)
-        .select("*")
-        .eq("session_id", ctx.sessionId);
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchSessionParticipants(qrToken),
     enabled: !!ctx?.sessionId,
   });
 
