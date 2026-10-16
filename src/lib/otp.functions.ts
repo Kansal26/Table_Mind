@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminAuth } from "./auth.server";
 import { rateLimit } from "./rate-limit.server";
 import { Resend } from "resend";
+import { emailLayout, otpEmailHtml, getEmailFrom } from "./email.server";
 
 const resend = process.env["RESEND_API_KEY"] ? new Resend(process.env["RESEND_API_KEY"]) : null;
 
@@ -16,10 +17,9 @@ function hashOtp(code: string, salt: string): string {
 }
 
 function generateRandomCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Use crypto.randomInt for cryptographically secure 6-digit OTPs
+  return crypto.randomInt(100000, 1000000).toString();
 }
-
-import { emailLayout, otpEmailHtml } from "./email.server";
 
 async function sendOtpEmail(email: string, purpose: string, code: string) {
   if (!resend) {
@@ -83,7 +83,7 @@ async function sendOtpEmail(email: string, purpose: string, code: string) {
   });
 
   await resend.emails.send({
-    from: "onboarding@resend.dev",
+    from: getEmailFrom(),
     to: email,
     subject,
     html,
@@ -161,13 +161,14 @@ export const verifyOtpFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await verifyAdminAuth(data.token);
 
-    // Find the most recent unused, non-expired OTP for this user+purpose
+    // Find the most recent unconsumed, unused OTP for this user+purpose
     const { data: otps, error } = await supabaseAdmin
       .from("otp_verifications")
       .select("*")
       .eq("user_id", user.id)
       .eq("purpose", data.purpose)
       .is("used_at", null)
+      .is("consumed_at", null)
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -202,17 +203,45 @@ export const verifyOtpFn = createServerFn({ method: "POST" })
       };
     }
 
-    // Increment attempts
-    await supabaseAdmin
-      .from("otp_verifications")
-      .update({ attempts: otp.attempts + 1 })
-      .eq("id", otp.id);
+    // Atomically increment attempts to prevent parallel guess races
+    let newAttempts = otp.attempts + 1;
+    const { data: rpcAttempts, error: rpcErr } = await supabaseAdmin.rpc("increment_otp_attempts", {
+      p_otp_id: otp.id,
+    });
+    if (!rpcErr && typeof rpcAttempts === "number") {
+      newAttempts = rpcAttempts;
+    } else {
+      await supabaseAdmin
+        .from("otp_verifications")
+        .update({ attempts: newAttempts })
+        .eq("id", otp.id);
+    }
 
+    if (newAttempts > otp.max_attempts) {
+      await supabaseAdmin
+        .from("otp_verifications")
+        .update({ used_at: new Date().toISOString() })
+        .eq("id", otp.id);
+      return {
+        verified: false,
+        attemptsRemaining: 0,
+        error: "Too many attempts. Please request a new OTP.",
+      };
+    }
+
+    // Compare code hashes using constant-time comparison to prevent timing attacks
     const codeHash = hashOtp(data.code, otp.salt);
-    if (codeHash !== otp.code_hash) {
-      const remaining = otp.max_attempts - (otp.attempts + 1);
+    const hashBuffer = Buffer.from(codeHash, "hex");
+    const expectedBuffer = Buffer.from(otp.code_hash, "hex");
+
+    const matches =
+      hashBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(hashBuffer, expectedBuffer);
+
+    if (!matches) {
+      const remaining = otp.max_attempts - newAttempts;
       if (remaining <= 0) {
-        // Invalidate on hitting 0
+        // Invalidate on hitting max attempts
         await supabaseAdmin
           .from("otp_verifications")
           .update({ used_at: new Date().toISOString() })
@@ -226,11 +255,64 @@ export const verifyOtpFn = createServerFn({ method: "POST" })
       return { verified: false, attemptsRemaining: remaining, error: "Incorrect code." };
     }
 
-    // Success! Mark as used
+    // Success: mark as verified_at (do NOT burn with used_at or consumed_at yet)
     await supabaseAdmin
       .from("otp_verifications")
-      .update({ used_at: new Date().toISOString() })
+      .update({ verified_at: new Date().toISOString() })
       .eq("id", otp.id);
 
     return { verified: true };
   });
+
+/**
+ * Server-side helper to ensure an OTP was verified within the last 5 minutes
+ * and has not already been consumed. Atomically consumes it.
+ * Throws 403 if missing, expired, or already consumed.
+ */
+export async function consumeVerifiedOtp(userId: string, purpose: string): Promise<void> {
+  // 1. Try atomic Postgres function if migration has been executed
+  const { data: rpcSuccess, error: rpcError } = await supabaseAdmin.rpc("consume_verified_otp", {
+    p_user_id: userId,
+    p_purpose: purpose,
+  });
+
+  if (!rpcError && typeof rpcSuccess === "boolean") {
+    if (!rpcSuccess) {
+      throw new Error("403: Forbidden. Validated OTP required. Please verify an OTP first.");
+    }
+    return;
+  }
+
+  // 2. Fallback to atomic select-then-conditional-update query
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: rows, error: selectErr } = await supabaseAdmin
+    .from("otp_verifications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("purpose", purpose)
+    .is("consumed_at", null)
+    .is("used_at", null)
+    .gte("verified_at", fiveMinutesAgo)
+    .order("verified_at", { ascending: false })
+    .limit(1);
+
+  const target = rows?.[0];
+  if (selectErr || !target) {
+    throw new Error("403: Forbidden. Validated OTP required. Please verify an OTP first.");
+  }
+
+  const { data: updated, error: updateErr } = await supabaseAdmin
+    .from("otp_verifications")
+    .update({
+      consumed_at: new Date().toISOString(),
+      used_at: new Date().toISOString(),
+    })
+    .eq("id", target.id)
+    .is("consumed_at", null)
+    .select("id")
+    .single();
+
+  if (updateErr || !updated) {
+    throw new Error("403: Forbidden. Validated OTP required. Please verify an OTP first.");
+  }
+}

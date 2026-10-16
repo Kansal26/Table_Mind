@@ -677,6 +677,8 @@ export type Database = {
           max_attempts: number;
           expires_at: string;
           used_at: string | null;
+          verified_at: string | null;
+          consumed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -689,6 +691,8 @@ export type Database = {
           max_attempts?: number;
           expires_at: string;
           used_at?: string | null;
+          verified_at?: string | null;
+          consumed_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -701,6 +705,8 @@ export type Database = {
           max_attempts?: number;
           expires_at?: string;
           used_at?: string | null;
+          verified_at?: string | null;
+          consumed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -725,6 +731,19 @@ export type Database = {
           p_restaurant_id?: string | null;
         };
         Returns: number;
+      };
+      increment_otp_attempts: {
+        Args: {
+          p_otp_id: string;
+        };
+        Returns: number;
+      };
+      consume_verified_otp: {
+        Args: {
+          p_user_id: string;
+          p_purpose: string;
+        };
+        Returns: boolean;
       };
     };
     Enums: {

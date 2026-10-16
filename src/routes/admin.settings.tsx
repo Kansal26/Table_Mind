@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateAndSendOtpFn, verifyOtpFn } from "@/lib/otp.functions";
-import { deactivateAccountFn, deleteAccountFn } from "@/lib/security.functions";
+import { changePasswordFn, deactivateAccountFn, deleteAccountFn } from "@/lib/security.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,8 +68,7 @@ function SettingsPage() {
           data: { token, purpose: "change_password", code: pwdOtp },
         });
         if (verifyRes.verified) {
-          const { error } = await supabase.auth.updateUser({ password: newPassword });
-          if (error) throw error;
+          await changePasswordFn({ data: { token, newPassword } });
           toast.success("Password updated successfully!");
           setNewPassword("");
           setConfirmPassword("");

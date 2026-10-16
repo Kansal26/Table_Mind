@@ -3,6 +3,8 @@ import { Resend } from "resend";
 // Only initialize if the API key is present
 const resend = process.env["RESEND_API_KEY"] ? new Resend(process.env["RESEND_API_KEY"]) : null;
 
+export const getEmailFrom = () => process.env["EMAIL_FROM"] || "onboarding@resend.dev";
+
 interface OrderItem {
   name: string;
   qty: number;
@@ -222,7 +224,7 @@ ${emailButton(dashboardUrl, "View on dashboard")}
 
   try {
     const data = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: getEmailFrom(),
       to: ownerEmail,
       subject: `New order — ${tableName} at ${restaurantName}`,
       html: html,
@@ -310,7 +312,7 @@ ${billBreakdownHtml({ items, subtotal, discount, creditsApplied, tax, total })}
 
   try {
     await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: getEmailFrom(),
       to: guestEmail,
       subject: `Your receipt from ${restaurantName}`,
       html,
@@ -372,7 +374,7 @@ ${emailButton(dashboardUrl, "Go to your dashboard")}
   try {
     console.log("[WELCOME EMAIL] Calling Resend API...");
     const data = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: getEmailFrom(),
       to: ownerEmail,
       subject: `Welcome to TableMind, ${restaurantName}`,
       html: html,
